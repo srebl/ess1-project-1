@@ -19,6 +19,7 @@
 typedef struct{
   CPU_INT08U x,y,size;
   CPU_INT08S vX,vY;
+  CPU_BOOLEAN is_active;
 }Asteroid;
 
 typedef enum {
@@ -45,6 +46,7 @@ typedef struct{
   GameMode mode;
   Asteroid asteroids [MAX_ASTEROIDS];
   
+  Player player;
 }GameState;
 
 

@@ -137,9 +137,136 @@ static CPU_INT16U          _font_orientation;
 static CPU_INT16U         _font_first_char;
 static CPU_INT16U         _font_last_char;
 static CPU_INT16U         _font_height;
-//static CPU_INT16U         x_cord;
-//static CPU_INT16U         y_cord;
+static CPU_INT16U         x_cord;
+static CPU_INT16U         y_cord;
 
+/**
+ * @brief OLED C function
+ *
+ * @param[in] col           column of pixel
+ * @param[in] row           row of pixel
+ * @param[in] color         pixel color in rgb565
+ *
+ * Draws a pixel at a specified coordination with a specfied color
+ */
+
+ void pixel(CPU_INT08U col, CPU_INT08U row, CPU_INT16U color){
+    CPU_INT08U cmd = _OLEDC_WRITE_RAM;
+    CPU_INT08U clr[2] = {0};
+    
+    if((col > OLEDC_SCREENSIZE) || (row > OLEDC_SCREENSIZE)){
+        return;
+    }
+    
+    cols[0] = _OLEDC_COL_OFF + col;
+    cols[1] = _OLEDC_COL_OFF + col;
+    rows[0] = _OLEDC_ROW_OFF + row;
+    rows[1] = _OLEDC_ROW_OFF + row;
+    
+    clr[0] |= color >> 8;
+    clr[1] |= color & 0x00FF;
+    
+    oledc_command(_OLEDC_SET_COL_ADDRESS, cols, 2);
+    oledc_command(_OLEDC_SET_ROW_ADDRESS, rows, 2);
+    
+    hal_gpio_csSet(LOW);
+    hal_gpio_dcSet(LOW);
+    hal_spiWrite(&cmd, 1);
+    hal_gpio_dcSet(HIGH);
+    
+    hal_spiWrite(clr, 2);
+    hal_gpio_csSet(HIGH);
+}
+
+static void character( uint16_t ch )
+{
+    uint8_t     ch_width = 0;
+    uint8_t     x_cnt;
+    uint8_t     y_cnt;
+    uint16_t    x = 0;
+    uint16_t    y = 0;
+    uint16_t    tmp;
+    uint8_t     temp = 0;
+    uint8_t     mask = 0;
+    uint32_t    offset;
+    const uint8_t *ch_table;
+    const uint8_t *ch_bitmap;
+
+    if( ch < _font_first_char )
+        return;
+
+    if( ch > _font_last_char )
+        return;
+
+    offset = 0;
+    tmp = (ch - _font_first_char) << 2;
+    ch_table = _font + 8 + tmp;
+    ch_width = *ch_table;
+
+    offset = (uint32_t)ch_table[1] + ((uint32_t)ch_table[2] << 8) + ((uint32_t)ch_table[3] << 16);
+
+    ch_bitmap = _font + offset;
+
+    if( ( _font_orientation == _OLEDC_FO_HORIZONTAL ) ||
+        ( _font_orientation == _OLEDC_FO_VERTICAL_COLUMN ) )
+    {
+        y = y_cord;
+        for (y_cnt = 0; y_cnt < _font_height; y_cnt++)
+        {
+            x = x_cord;
+            mask = 0;
+            for( x_cnt = 0; x_cnt < ch_width; x_cnt++ )
+            {
+                if( !mask )
+                {
+                    temp = *ch_bitmap++;
+                    mask = 0x01;
+                }
+
+                if( temp & mask )
+                    pixel( x, y, _font_color );
+
+                x++;
+                mask <<= 1;
+            }
+            y++;
+        }
+
+        if ( _font_orientation == _OLEDC_FO_HORIZONTAL )
+            x_cord = x + 1;
+        else
+            y_cord = y;
+    }
+    else
+    {
+        y = x_cord;
+
+        for( y_cnt = 0; y_cnt < _font_height; y_cnt++ )
+        {
+            x = y_cord;
+            mask = 0;
+
+            for( x_cnt = 0; x_cnt < ch_width; x_cnt++ )
+            {
+                if( mask == 0 )
+                {
+                    temp = *ch_bitmap++;
+                    mask = 0x01;
+                }
+
+                if( temp & mask )
+                {
+                    pixel( y, x, _font_color );
+                }
+
+                x--;
+                mask <<= 1;
+            }
+            y++;
+        }
+        y_cord = x - 1;
+    }
+}
 
 /**
  * @brief SPI driver init
@@ -232,42 +359,7 @@ void oledc_set_font(const CPU_INT08U *font, CPU_INT16U color, CPU_INT08U orienta
     _font_orientation   = orientation ;
 }
 
-/**
- * @brief OLED C function
- *
- * @param[in] col           column of pixel
- * @param[in] row           row of pixel
- * @param[in] color         pixel color in rgb565
- *
- * Draws a pixel at a specified coordination with a specfied color
- */
-static void pixel(CPU_INT08U col, CPU_INT08U row, CPU_INT16U color){
-    CPU_INT08U cmd = _OLEDC_WRITE_RAM;
-    CPU_INT08U clr[2] = {0};
-    
-    if((col > OLEDC_SCREENSIZE) || (row > OLEDC_SCREENSIZE)){
-        return;
-    }
-    
-    cols[0] = _OLEDC_COL_OFF + col;
-    cols[1] = _OLEDC_COL_OFF + col;
-    rows[0] = _OLEDC_ROW_OFF + row;
-    rows[1] = _OLEDC_ROW_OFF + row;
-    
-    clr[0] |= color >> 8;
-    clr[1] |= color & 0x00FF;
-    
-    oledc_command(_OLEDC_SET_COL_ADDRESS, cols, 2);
-    oledc_command(_OLEDC_SET_ROW_ADDRESS, rows, 2);
-    
-    hal_gpio_csSet(LOW);
-    hal_gpio_dcSet(LOW);
-    hal_spiWrite(&cmd, 1);
-    hal_gpio_dcSet(HIGH);
-    
-    hal_spiWrite(clr, 2);
-    hal_gpio_csSet(HIGH);
-}
+
 
 /**
  * @brief OLED C box area
@@ -448,11 +540,18 @@ void oledc_image(const CPU_INT08U *img, CPU_INT08U column_off, CPU_INT08U row_of
  *
  * Draws a box area over the entire screen in a specified color
  */
-void oledc_text(CPU_INT08U *text, CPU_INT16U col_off, CPU_INT16U row_off){
-    (void)text;
-    (void)col_off;
-    (void)row_off;
-    //to be added
+void oledc_text( CPU_INT08U *text, CPU_INT16U x, CPU_INT16U y )
+{
+    CPU_INT08U *ptr = text;
+
+    if( ( x >= _OLEDC_SCREEN_WIDTH ) || (y >= _OLEDC_SCREEN_HEIGHT ) )
+        return;
+
+    x_cord = x;
+    y_cord = y;
+
+    while( *ptr )
+        character( *ptr++ );
 }
 
 /**

@@ -36,6 +36,7 @@
 #include <OLED_C_Reset.h>
 #include <OLED_C_CS.h>
 
+
     
 /*
 *********************************************************************************************************
@@ -225,7 +226,7 @@ void oledc_image(const CPU_INT08U *img, CPU_INT08U column_off, CPU_INT08U row_of
  *
  * Draws a box area over the entire screen in a specified color
  */
-void oledc_text(CPU_INT08U *font, CPU_INT16U col_off, CPU_INT16U row_off);
+void oledc_text( CPU_INT08U *text, CPU_INT16U x, CPU_INT16U y );
 /**
  * @brief OLED C line
  *

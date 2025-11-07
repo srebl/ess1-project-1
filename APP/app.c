@@ -55,8 +55,12 @@ static  CPU_STK  App_TaskSENDERStk[APP_CFG_TASK_SENDER_STK_SIZE];
 static  OS_TCB   App_TaskRECEIVER_TCB;
 static  CPU_STK  App_TaskRECEIVERStk[APP_CFG_TASK_RECEIVER_STK_SIZE];
 
+static OS_TCB  App_Task_GAME_LOOP_TCB;
+static CPU_STK App_Task_GAME_LOOP_Stk[APP_CFG_TASK_GAME_LOOP_STK_SIZE];
 
 OS_Q msg_q;
+
+static GameState gameState;
 
 /*
 *********************************************************************************************************
@@ -73,6 +77,7 @@ static  void  App_ObjCreate  (void);
 
 static void App_TaskSENDER (void *p_arg);
 static void App_TaskRECEIVER (void *p_arg);
+static void App_Task_GAME_LOOP (void *p_arg);
 
 /*
 *********************************************************************************************************
@@ -243,7 +248,23 @@ static  void  App_TaskCreate (void)
                (void        *)0,
                (OS_OPT       )(OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
                (OS_ERR      *)&os_err);
+  /* create GAME LOOP task */
+OSTaskCreate((OS_TCB      *) &App_Task_GAME_LOOP_TCB,
+             (CPU_CHAR    *) "Task_GAME_LOOP",
+             (OS_TASK_PTR  ) App_Task_GAME_LOOP, 
+             (void        *) 0,
+             (OS_PRIO      ) APP_CFG_TASK_GAME_LOOP_PRIO,
+             (CPU_STK     *) App_Task_GAME_LOOP_Stk,
+             (CPU_STK_SIZE ) APP_CFG_TASK_GAME_LOOP_STK_SIZE_LIMIT,
+             (CPU_STK_SIZE ) APP_CFG_TASK_GAME_LOOP_STK_SIZE,
+             (OS_MSG_QTY   ) 0u,
+             (OS_TICK      ) 0u,
+             (void        *) 0,
+             (OS_OPT       ) (OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
+             (OS_ERR      *) &os_err
+            );
 }
+
 
 
 /*
@@ -415,6 +436,7 @@ static  void  App_TaskRECEIVER (void *p_arg)
     CPU_INT08U sizeFactor = 1;
     CPU_INT08U z_axis = 0;
     CPU_INT08U range = 3;
+    oledc_set_font(guiFont_Tahoma_7_Regular,0xffff,_OLEDC_FO_HORIZONTAL);
   /* prevent compiler warnings */
     (void)p_arg;
   
@@ -422,14 +444,48 @@ static  void  App_TaskRECEIVER (void *p_arg)
   while (DEF_TRUE) {
     axis_data = (c6dofimu14_axis_t*)OSQPend(&msg_q, 20, OS_OPT_PEND_NON_BLOCKING, &size, &ts, &os_err);
     
-    oledc_rectangle(old_data.x - sizeFactor, old_data.y - sizeFactor, old_data.x + sizeFactor, old_data.y + sizeFactor, 0x0000);
-    
+    //oledc_rectangle(axis_data->x - sizeFactor, axis_data->y - sizeFactor, axis_data->x + sizeFactor, axis_data->y + sizeFactor, 0xffff);
+    CPU_INT08U text[] = "score";
+    oledc_text(text, 40,40);
     
     /* initiate scheduler */
     OSTimeDlyHMSM(0, 0, 0, 100, 
                   OS_OPT_TIME_HMSM_STRICT, 
                   &os_err);
   }
+}
+
+/*
+*********************************************************************************************************
+*                                          App_Task_GAME_LOOP
+*
+* Description : This task reads acceleration data from a MessageQueue, inits the OLED C and then prints
+                the data as coordinates on the OLED C as a pixel on an X and Y Axis, with an additional
+                line for its acceleration on the Z axis placed onto the Y axis.
+*
+* Argument(s) : p_arg is the argument passed to 'App_Task_RECEIVER' by 'OSTaskCreate()'.
+*
+* Return(s)   : none
+*
+* Note(s)     : none
+*********************************************************************************************************
+*/
+static void App_Task_GAME_LOOP(void *p_arg){
+    /* declare and define task local variables */
+    OS_ERR os_err;
+    OS_MSG_SIZE size;
+    CPU_TS ts;
+
+    
+    /* prevent compiler warnings */
+    (void)p_arg;
+    
+    /* start of the endless loop */ 
+    while (DEF_TRUE) {
+        
+        /* initiate scheduler */
+        OSTimeDlyHMSM(0, 0, 0, 10, OS_OPT_TIME_HMSM_STRICT, &os_err);
+    }
 }
 
 /* END OF FILE */

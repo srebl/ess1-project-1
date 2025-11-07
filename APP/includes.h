@@ -70,7 +70,8 @@
 #include <bsp_i2c.h>
 #include <bsp_c6dofimu14.h>
 #include <bsp_oledc.h>
-
+#include <entities.h>
+#include <fonts.h>
 
 /*
 *********************************************************************************************************

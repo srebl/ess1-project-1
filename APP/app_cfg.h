@@ -49,8 +49,8 @@
 #define  APP_CFG_TASK_START_PRIO                        2u
 #define  APP_CFG_TASK_COM_PRIO                          3u
 #define  APP_CFG_TASK_SENDER_PRIO                       4u
-#define  APP_CFG_TASK_RECEIVER_PRIO                       4u
-
+#define  APP_CFG_TASK_RECEIVER_PRIO                     4u
+#define APP_CFG_TASK_GAME_LOOP_PRIO                     4u
 
 /*
 *********************************************************************************************************
@@ -63,7 +63,7 @@
 #define  APP_CFG_TASK_COM_STK_SIZE                      128u
 #define  APP_CFG_TASK_SENDER_STK_SIZE                   128u
 #define  APP_CFG_TASK_RECEIVER_STK_SIZE                 128u
-
+#define APP_CFG_TASK_GAME_LOOP_STK_SIZE                 128u
 /*
 *********************************************************************************************************
 *                                          TASK STACK SIZES LIMIT
@@ -82,6 +82,8 @@
 #define  APP_CFG_TASK_RECEIVER_STK_SIZE_PCT_FULL             90u
 #define  APP_CFG_TASK_RECEIVER_STK_SIZE_LIMIT           (APP_CFG_TASK_RECEIVER_STK_SIZE  * (100u - APP_CFG_TASK_RECEIVER_STK_SIZE_PCT_FULL))  / 100u
 
+#define APP_CFG_TASK_GAME_LOOP_STK_SIZE_PCT_FULL              90u
+#define APP_CFG_TASK_GAME_LOOP_STK_SIZE_LIMIT           (APP_CFG_TASK_RECEIVER_STK_SIZE  * (100u - APP_CFG_TASK_RECEIVER_STK_SIZE_PCT_FULL))  / 100u
 
 /*
 *********************************************************************************************************
