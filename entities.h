@@ -12,7 +12,12 @@
 #ifndef  ENTITIES_PRESENT
 #define  ENTITIES_PRESENT
 
+#define GAME_AREA_LENGHT 96
+#define GAME_AREA_WIDTH 96
+  
 #define MAX_ASTEROIDS 4
+#define MIN_ASTEROID_SIZE 1
+#define MAX_ASTEROID_SIZE 20
   
 #include <cpu.h>
 
@@ -28,7 +33,7 @@ typedef enum {
 } PlayerState;
 
 typedef struct {
-  CPU_INT08U x,y;
+  CPU_INT08U x,y,size;
   CPU_INT08S vX,vY;
   CPU_INT16U score;
   PlayerState player_state;
@@ -45,7 +50,6 @@ typedef enum {
 typedef struct{
   GameMode mode;
   Asteroid asteroids [MAX_ASTEROIDS];
-  
   Player player;
 }GameState;
 
