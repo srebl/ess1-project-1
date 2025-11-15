@@ -75,11 +75,11 @@ CPU_VOID destroy_asteroids(GameState* game_state){
     if(!game_state->asteroids[i].is_active) continue;
       
       if(game_state->asteroids[i].x > GAME_AREA_WIDTH + game_state->asteroids[i].size + 3 ||
-        game_state->asteroids[i].x > 0 - game_state->asteroids[i].size - 3){
+        game_state->asteroids[i].x < 0 - game_state->asteroids[i].size - 3){
           game_state->asteroids[i].is_active = DEF_FALSE;
         }
       else if(game_state->asteroids[i].y > GAME_AREA_HEIGHT + game_state->asteroids[i].size + 3 ||
-        game_state->asteroids[i].y > 0 - game_state->asteroids[i].size - 3){
+        game_state->asteroids[i].y < 0 - game_state->asteroids[i].size - 3){
         game_state->asteroids[i].is_active = DEF_FALSE;
       }
   }
