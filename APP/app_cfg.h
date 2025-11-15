@@ -51,6 +51,9 @@
 #define  APP_CFG_TASK_SENDER_PRIO                       4u
 #define  APP_CFG_TASK_RECEIVER_PRIO                     4u
 #define APP_CFG_TASK_GAME_LOOP_PRIO                     4u
+#define APP_CFG_TASK_RENDER_PRIO                        4u
+#define APP_CFG_TASK_DISPLAY_PRIO                       4u
+#define APP_CFG_TASK_BUTTON_PRIO                        4u
 
 /*
 *********************************************************************************************************
@@ -64,6 +67,10 @@
 #define  APP_CFG_TASK_SENDER_STK_SIZE                   128u
 #define  APP_CFG_TASK_RECEIVER_STK_SIZE                 128u
 #define APP_CFG_TASK_GAME_LOOP_STK_SIZE                 128u
+#define APP_CFG_TASK_RENDER_STK_SIZE                 128u  
+#define APP_CFG_TASK_DISPLAY_STK_SIZE                 128u  
+#define APP_CFG_TASK_BUTTON_STK_SIZE                 128u
+  
 /*
 *********************************************************************************************************
 *                                          TASK STACK SIZES LIMIT
@@ -83,8 +90,17 @@
 #define  APP_CFG_TASK_RECEIVER_STK_SIZE_LIMIT           (APP_CFG_TASK_RECEIVER_STK_SIZE  * (100u - APP_CFG_TASK_RECEIVER_STK_SIZE_PCT_FULL))  / 100u
 
 #define APP_CFG_TASK_GAME_LOOP_STK_SIZE_PCT_FULL              90u
-#define APP_CFG_TASK_GAME_LOOP_STK_SIZE_LIMIT           (APP_CFG_TASK_RECEIVER_STK_SIZE  * (100u - APP_CFG_TASK_RECEIVER_STK_SIZE_PCT_FULL))  / 100u
+#define APP_CFG_TASK_GAME_LOOP_STK_SIZE_LIMIT           (APP_CFG_TASK_GAME_LOOP_STK_SIZE  * (100u - APP_CFG_TASK_GAME_LOOP_STK_SIZE_PCT_FULL))  / 100u
 
+#define APP_CFG_TASK_RENDER_STK_SIZE_PCT_FULL              90u
+#define APP_CFG_TASK_RENDER_STK_SIZE_LIMIT           (APP_CFG_TASK_RENDER_STK_SIZE  * (100u - APP_CFG_TASK_RENDER_STK_SIZE_PCT_FULL))  / 100u 
+  
+#define APP_CFG_TASK_DISPLAY_STK_SIZE_PCT_FULL              90u
+#define APP_CFG_TASK_DISPLAY_STK_SIZE_LIMIT           (APP_CFG_TASK_DISPLAY_STK_SIZE  * (100u - APP_CFG_TASK_DISPLAY_STK_SIZE_PCT_FULL))  / 100u  
+
+#define APP_CFG_TASK_BUTTON_STK_SIZE_PCT_FULL              90u
+#define APP_CFG_TASK_BUTTON_STK_SIZE_LIMIT           (APP_CFG_TASK_BUTTON_STK_SIZE  * (100u - APP_CFG_TASK_BUTTON_STK_SIZE_PCT_FULL))  / 100u
+  
 /*
 *********************************************************************************************************
 *                                          uC/LIB CONFIGURATION

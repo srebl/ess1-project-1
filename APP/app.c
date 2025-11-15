@@ -58,9 +58,28 @@ static  CPU_STK  App_TaskRECEIVERStk[APP_CFG_TASK_RECEIVER_STK_SIZE];
 static OS_TCB  App_Task_GAME_LOOP_TCB;
 static CPU_STK App_Task_GAME_LOOP_Stk[APP_CFG_TASK_GAME_LOOP_STK_SIZE];
 
+static OS_TCB  App_Task_RENDER_TCB;
+static CPU_STK App_Task_RENDER_Stk[APP_CFG_TASK_RENDER_STK_SIZE];
+
+static OS_TCB  App_Task_DISPLAY_TCB;
+static CPU_STK App_Task_DISPLAY_Stk[APP_CFG_TASK_DISPLAY_STK_SIZE];
+
+static OS_TCB  App_Task_BUTTON_TCB;
+static CPU_STK App_Task_BUTTON_Stk[APP_CFG_TASK_BUTTON_STK_SIZE];
+
 OS_Q msg_q;
+OS_SEM button_sem;
 
 static GameState gameState;
+
+// zum testen mal: ZR
+typedef enum {
+  APP_SCREEN_STATE_START = 0,
+  APP_SCREEN_STATE_RUNNING,
+  APP_SCREEN_STATE_GAME_OVER
+} APP_SCREEN_STATE;
+
+static APP_SCREEN_STATE app_screen_state = APP_SCREEN_STATE_START;
 
 /*
 *********************************************************************************************************
@@ -78,6 +97,9 @@ static  void  App_ObjCreate  (void);
 static void App_TaskSENDER (void *p_arg);
 static void App_TaskRECEIVER (void *p_arg);
 static void App_Task_GAME_LOOP (void *p_arg);
+static void App_Task_RENDER (void *p_arg);
+static void App_Task_DISPLAY (void *p_arg);
+static void App_Task_BUTTON (void *p_arg);
 
 /*
 *********************************************************************************************************
@@ -225,7 +247,7 @@ static  void  App_TaskCreate (void)
                (void        *)0,
                (OS_OPT       )(OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
                (OS_ERR      *)&os_err);
-/* create SENDER task */
+  /* create SENDER task */
   OSTaskCreate((OS_TCB      *)&App_TaskSENDER_TCB,
                (CPU_CHAR    *)"TaskSENDER",
                (OS_TASK_PTR  )App_TaskSENDER, 
@@ -239,7 +261,7 @@ static  void  App_TaskCreate (void)
                (void        *)0,
                (OS_OPT       )(OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
                (OS_ERR      *)&os_err);
-/* create RECEIVER task */
+  /* create RECEIVER task */
   OSTaskCreate((OS_TCB      *)&App_TaskRECEIVER_TCB,
                (CPU_CHAR    *)"TaskRECEIVER",
                (OS_TASK_PTR  )App_TaskRECEIVER, 
@@ -254,7 +276,7 @@ static  void  App_TaskCreate (void)
                (OS_OPT       )(OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
                (OS_ERR      *)&os_err);
   /* create GAME LOOP task */
-OSTaskCreate((OS_TCB      *) &App_Task_GAME_LOOP_TCB,
+  OSTaskCreate((OS_TCB      *) &App_Task_GAME_LOOP_TCB,
              (CPU_CHAR    *) "Task_GAME_LOOP",
              (OS_TASK_PTR  ) App_Task_GAME_LOOP, 
              (void        *) 0,
@@ -268,6 +290,51 @@ OSTaskCreate((OS_TCB      *) &App_Task_GAME_LOOP_TCB,
              (OS_OPT       ) (OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
              (OS_ERR      *) &os_err
             );
+
+  /* create RENDER task */
+  OSTaskCreate((OS_TCB      *)&App_Task_RENDER_TCB,
+             (CPU_CHAR    *)"TaskRENDER",
+             (OS_TASK_PTR  )App_Task_RENDER, 
+             (void        *)0,
+             (OS_PRIO      )APP_CFG_TASK_RENDER_PRIO,
+             (CPU_STK     *)&App_Task_RENDER_Stk[0],
+             (CPU_STK_SIZE )APP_CFG_TASK_RENDER_STK_SIZE_LIMIT,
+             (CPU_STK_SIZE )APP_CFG_TASK_RENDER_STK_SIZE,
+             (OS_MSG_QTY   )0u,
+             (OS_TICK      )0u,
+             (void        *)0,
+             (OS_OPT       )(OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
+             (OS_ERR      *)&os_err);
+
+  /* create DISPLAY task */
+  OSTaskCreate((OS_TCB      *)&App_Task_DISPLAY_TCB,
+             (CPU_CHAR    *)"TaskDISPLAY",
+             (OS_TASK_PTR  )App_Task_DISPLAY, 
+             (void        *)0,
+             (OS_PRIO      )APP_CFG_TASK_DISPLAY_PRIO,
+             (CPU_STK     *)&App_Task_DISPLAY_Stk[0],
+             (CPU_STK_SIZE )APP_CFG_TASK_DISPLAY_STK_SIZE_LIMIT,
+             (CPU_STK_SIZE )APP_CFG_TASK_DISPLAY_STK_SIZE,
+             (OS_MSG_QTY   )0u,
+             (OS_TICK      )0u,
+             (void        *)0,
+             (OS_OPT       )(OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
+             (OS_ERR      *)&os_err);
+
+  /* create BUTTON task */
+  OSTaskCreate((OS_TCB      *)&App_Task_BUTTON_TCB,
+             (CPU_CHAR    *)"TaskBUTTON",
+             (OS_TASK_PTR  )App_Task_BUTTON, 
+             (void        *)0,
+             (OS_PRIO      )APP_CFG_TASK_BUTTON_PRIO,
+             (CPU_STK     *)&App_Task_BUTTON_Stk[0],
+             (CPU_STK_SIZE )APP_CFG_TASK_BUTTON_STK_SIZE_LIMIT,
+             (CPU_STK_SIZE )APP_CFG_TASK_BUTTON_STK_SIZE,
+             (OS_MSG_QTY   )0u,
+             (OS_TICK      )0u,
+             (void        *)0,
+             (OS_OPT       )(OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
+             (OS_ERR      *)&os_err);
 }
 
 
@@ -293,7 +360,19 @@ static  void  App_ObjCreate (void)
   /* declare and define function local variables */
   OS_ERR  os_err;
   
-  /* create button semaphore to synchronize button press events */
+  // Message Queue für IMU-Daten (Sender -> Receiver)
+  OSQCreate(&msg_q,
+            "IMU Msg Q",
+            30u,        // max. Anzahl Messages
+            &os_err);
+
+  // Semaphore für Button (für später, jetzt noch ungenutzt)
+  OSSemCreate(&button_sem,
+              "Button Sem",
+              0u,        // initialer Zähler = 0
+              &os_err);
+
+  (void)os_err;
 }
 
 
@@ -392,21 +471,25 @@ static  void  App_TaskSENDER (void *p_arg)
 {
   /* declare and define task local variables */
   OS_ERR       os_err;
-    
-    c6dofimu14_axis_t axis_data = {0, 0, 0};
+  
+  static c6dofimu14_axis_t axis_data = {0, 0, 0};
   
   /* prevent compiler warnings */
     (void)p_arg;
   
   /* start of the endless loop */
   while (DEF_TRUE) {
-    c6dofimu14_read_accel_axis(&axis_data);
-    OSQPost(&msg_q, &axis_data, MESSAGE_SIZE, OS_OPT_POST_FIFO, &os_err);
-    
-    /* initiate scheduler */
-    OSTimeDlyHMSM(0, 0, 0, 100, 
-                  OS_OPT_TIME_HMSM_STRICT, 
-                  &os_err);
+        c6dofimu14_read_accel_axis(&axis_data);
+
+        OSQPost(&msg_q,
+                &axis_data,
+                sizeof(axis_data),
+                OS_OPT_POST_FIFO,
+                &os_err);
+
+        OSTimeDlyHMSM(0, 0, 0, 100,
+                      OS_OPT_TIME_HMSM_STRICT,
+                      &os_err);
   }
 }
 
@@ -430,28 +513,36 @@ static  void  App_TaskRECEIVER (void *p_arg)
   /* declare and define task local variables */
   OS_ERR       os_err;
   
-    OS_MSG_SIZE size;
-    CPU_TS ts;
-    
-    c6dofimu14_axis_t *axis_data;
-    c6dofimu14_axis_t old_data = {46, 46, 0}; //middle, no z
-    
-    oledc_fill_screen(0x0000);
-    
-    CPU_INT08U sizeFactor = 1;
-    CPU_INT08U z_axis = 0;
-    CPU_INT08U range = 3;
-    oledc_set_font(guiFont_Tahoma_7_Regular,0xffff,_OLEDC_FO_HORIZONTAL);
+  OS_MSG_SIZE size;
+  CPU_TS ts;
+  
+  c6dofimu14_axis_t *axis_data;
+  c6dofimu14_axis_t old_data = {46, 46, 0}; //middle, no z
+  
+  oledc_fill_screen(0x0000);
+  oledc_set_font(guiFont_Tahoma_7_Regular,0xffff,_OLEDC_FO_HORIZONTAL);
   /* prevent compiler warnings */
-    (void)p_arg;
+  (void)p_arg;
   
   /* start of the endless loop */
   while (DEF_TRUE) {
-    axis_data = (c6dofimu14_axis_t*)OSQPend(&msg_q, 20, OS_OPT_PEND_NON_BLOCKING, &size, &ts, &os_err);
-    
-    //oledc_rectangle(axis_data->x - sizeFactor, axis_data->y - sizeFactor, axis_data->x + sizeFactor, axis_data->y + sizeFactor, 0xffff);
-    CPU_INT08U text[] = "score";
-    oledc_text(text, 40,40);
+
+    axis_data = (c6dofimu14_axis_t *)OSQPend(&msg_q,
+                                             0,                     // 0 = kein Timeout, BLOCKING
+                                             OS_OPT_PEND_BLOCKING,
+                                             &size,
+                                             &ts,
+                                             &os_err);
+
+    if ((os_err == OS_ERR_NONE) && (axis_data != (c6dofimu14_axis_t *)0)) {
+
+        // Hier kommt dann der Spiel-Input:
+        // vorerst nur Dummy-Text:
+        CPU_INT08U text[] = "score";
+        oledc_text(text, 40, 40);
+
+        old_data = *axis_data;  // letzte Nummern zeigen
+    }
     
     /* initiate scheduler */
     OSTimeDlyHMSM(0, 0, 0, 100, 
@@ -488,8 +579,213 @@ static void App_Task_GAME_LOOP(void *p_arg){
     /* start of the endless loop */ 
     while (DEF_TRUE) {
         
+        switch (app_screen_state) {
+
+        case APP_SCREEN_STATE_START:
+            // Warten bis Button gedrückt (Semaphore von BUTTON-Task)
+            OSSemPend(&button_sem,
+                      0,                         // kein Timeout
+                      OS_OPT_PEND_BLOCKING,
+                      NULL,
+                      &os_err);
+
+            if (os_err == OS_ERR_NONE) {
+                // hier später: GameState initialisieren
+                app_screen_state = APP_SCREEN_STATE_RUNNING;
+            }
+            break;
+
+        case APP_SCREEN_STATE_RUNNING:
+            // Hier wird später die Spiellogik sein (Movement, Collision, Score etc.)
+            // Für jetzt nur ein kleiner Delay, damit die CPU nicht voll rennt.
+            OSTimeDlyHMSM(0, 0, 0, 50,
+                          OS_OPT_TIME_HMSM_STRICT,
+                          &os_err);
+            break;
+
+        case APP_SCREEN_STATE_GAME_OVER:
+            // Später: Game Over Screen -> auf Button warten für Neustart
+            OSSemPend(&button_sem,
+                      0,
+                      OS_OPT_PEND_BLOCKING,
+                      NULL,
+                      &os_err);
+
+            if (os_err == OS_ERR_NONE) {
+                app_screen_state = APP_SCREEN_STATE_START;
+            }
+            break;
+
+        default:
+            app_screen_state = APP_SCREEN_STATE_START;
+            break;
+        }
+    }
+    
+}
+
+/*
+*********************************************************************************************************
+*                                          App_Task_RENDER
+*
+* Description : 
+*
+* Argument(s) : 
+*
+* Return(s)   : none
+*
+* Note(s)     : none
+*********************************************************************************************************
+*/
+static void App_Task_RENDER(void *p_arg){
+    /* declare and define task local variables */
+    OS_ERR os_err;
+    OS_MSG_SIZE size;
+    CPU_TS ts;
+
+    
+    /* prevent compiler warnings */
+    (void)p_arg;
+    
+    /**/
+    oledc_set_font(guiFont_Tahoma_7_Regular, 0xffff, _OLEDC_FO_HORIZONTAL);
+    
+    /* start of the endless loop */ 
+    while (DEF_TRUE) {
+
+        oledc_fill_screen(0x0000);
+
+        // Einfacher Startscreen-Test --> später echte Darstellung von GameState
+        switch (app_screen_state) {
+          
+            case APP_SCREEN_STATE_START:
+            {
+                CPU_INT08U txt1[] = "Asteroids";
+                CPU_INT08U txt2[] = "Press BTN to start";
+
+                oledc_text(txt1, 10, 20);
+                oledc_text(txt2, 2, 40);
+            }
+                break;
+            
+            case APP_SCREEN_STATE_RUNNING:
+            {
+                // Platzhalter-Anzeige, spaeter: Player, Asteroids, Score etc.
+                CPU_INT08U txt1[] = "RUNNING...";
+                oledc_text(txt1, 20, 30);
+            }
+            
+                break;
+            
+            case APP_SCREEN_STATE_GAME_OVER:
+            {
+                CPU_INT08U txt1[] = "GAME OVER";
+                CPU_INT08U txt2[] = "Press BTN";
+
+                oledc_text(txt1, 20, 30);
+                oledc_text(txt2, 25, 45);
+            }
+                break;
+
+            default:
+                break;
+        }
+        
+        OSTimeDlyHMSM(0, 0, 0, 100,
+                      OS_OPT_TIME_HMSM_STRICT,
+                      &os_err);
+    }
+}
+
+/*
+*********************************************************************************************************
+*                                          App_Task_DISPLAY
+*
+* Description : 
+*
+* Argument(s) : 
+*
+* Return(s)   : none
+*
+* Note(s)     : none
+*********************************************************************************************************
+*/
+static void App_Task_DISPLAY(void *p_arg){
+    /* declare and define task local variables */
+    OS_ERR os_err;
+    OS_MSG_SIZE size;
+    CPU_TS ts;
+
+    
+    /* prevent compiler warnings */
+    (void)p_arg;
+    
+    /* start of the endless loop */ 
+    while (DEF_TRUE) {
+        
+        /*später hier DISPLAY-Refresh / Double Refresher*/
+      
         /* initiate scheduler */
         OSTimeDlyHMSM(0, 0, 0, 10, OS_OPT_TIME_HMSM_STRICT, &os_err);
+    }
+}
+
+/*
+*********************************************************************************************************
+*                                          App_Task_BUTTON
+*
+* Description : 
+*
+* Argument(s) : 
+*
+* Return(s)   : none
+*
+* Note(s)     : none
+*********************************************************************************************************
+*/
+static void App_Task_BUTTON(void *p_arg){
+    /* declare and define task local variables */
+    OS_ERR os_err;
+    OS_MSG_SIZE size;
+    CPU_TS ts;
+  
+    CPU_BOOLEAN last_state = 1u; // gedrück = 0, nicht gedrückt = 1;
+    CPU_BOOLEAN cur_state;
+    
+    /* prevent compiler warnings */
+    (void)p_arg;
+    
+    /* start of the endless loop */ 
+    while (DEF_TRUE) {
+        cur_state = push_button_Read();
+
+        // Flanke von "nicht gedrückt" -> "gedrückt"
+        if ((cur_state == 0u) && (last_state != 0u)) {
+
+            // einfache Entprellung
+            OSTimeDlyHMSM(0, 0, 0, 20,
+                          OS_OPT_TIME_HMSM_STRICT,
+                          &os_err);
+
+            cur_state = push_button_Read();
+            if (cur_state == 0u) {
+                // gültiger Druck -> Semaphore posten
+                OSSemPost(&button_sem, OS_OPT_POST_1, &os_err);
+
+                // warten bis Button wieder losgelassen wird
+                while (push_button_Read() == 0u) {
+                    OSTimeDlyHMSM(0, 0, 0, 20,
+                                  OS_OPT_TIME_HMSM_STRICT,
+                                  &os_err);
+                }
+            }
+        }
+
+        last_state = cur_state;
+
+        OSTimeDlyHMSM(0, 0, 0, 20,
+                      OS_OPT_TIME_HMSM_STRICT,
+                      &os_err);
     }
 }
 
