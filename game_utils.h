@@ -13,6 +13,8 @@
 #include<entities.h>
 #include<stdlib.h>
 #include<os.h>
+#include<math.h>
+
 CPU_BOOLEAN check_collisions(GameState* game_state);
 CPU_VOID spawn_asteroids(GameState* game_state);
 CPU_VOID calculate_movement(GameState* game_state);

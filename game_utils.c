@@ -67,6 +67,14 @@ CPU_VOID spawn_asteroids(GameState* game_state){
           game_state->asteroids[i].y = 96 - game_state->asteroids[i].size;
       }
     }
+    
+    CPU_INT16U vX = game_state->player.x - game_state->asteroids[i].x;
+    CPU_INT16U vY = game_state->player.y - game_state->asteroids[i].y;
+    
+    CPU_INT16U length = sqrt((vX*vX + vY*vY));
+    game_state->asteroids[i].vX = vX/length;
+    game_state->asteroids[i].vY = vY/length;
+    
   }
 }
 
