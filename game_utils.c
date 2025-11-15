@@ -57,7 +57,7 @@ CPU_VOID spawn_asteroids(GameState* game_state){
     // choose y axis First
     else{
       game_state->asteroids[i].y = (0 - game_state->asteroids[i].size) + rand() % ((game_state->asteroids[i].size + GAME_AREA_WIDTH) - (0-game_state->asteroids[i].size) + 1);
-    }
+    
       // asteroid will come from left
       if(rand()%100 <50){
         game_state->asteroids[i].x = 0 - game_state->asteroids[i].size;
@@ -66,6 +66,27 @@ CPU_VOID spawn_asteroids(GameState* game_state){
       else{
           game_state->asteroids[i].y = 96 - game_state->asteroids[i].size;
       }
+    }
   }
 }
+
+CPU_VOID destroy_asteroids(GameState* game_state){
+  for(int i = 0; i< MAX_ASTEROIDS; i++){
+    if(!game_state->asteroids[i].is_active) continue;
+      
+      if(game_state->asteroids[i].x > GAME_AREA_WIDTH + game_state->asteroids[i].size + 3 ||
+        game_state->asteroids[i].x < 0 - game_state->asteroids[i].size - 3){
+          game_state->asteroids[i].is_active = DEF_FALSE;
+        }
+      else if(game_state->asteroids[i].y > GAME_AREA_HEIGHT + game_state->asteroids[i].size + 3 ||
+        game_state->asteroids[i].y < 0 - game_state->asteroids[i].size - 3){
+        game_state->asteroids[i].is_active = DEF_FALSE;
+      }
+  }
+}
+
+
+
+
+
 /* [] END OF FILE */
