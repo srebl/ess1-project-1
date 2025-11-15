@@ -589,17 +589,92 @@ void oledc_line(CPU_INT08U x1, CPU_INT08U y1, CPU_INT08U x2, CPU_INT08U y2, CPU_
     }
 }
 
-/**
- * @brief OLED C hud
- *
- * Draws the main hud "background"
- */
-void oledc_hud(){
-    oledc_line(48, 0, 48, 95,0x07e0);
-    oledc_line(0, 48, 95, 48,0x07e0);
+void oledc_line_any(CPU_INT08U x1, CPU_INT08U y1, CPU_INT08U x2, CPU_INT08U y2, CPU_INT16U color){
+    if(x1 != x2 && y1 != y2){
+        CPU_INT08S d_x = x2 - x1;
+        CPU_INT08S d_y = y2 - y1;
+        
+        CPU_INT16S steps = (abs(d_x) > abs(d_y)) ? abs(d_x) : abs(d_y);
+        
+        CPU_FP32 x_inc = (CPU_FP32)d_x / steps;
+        CPU_FP32 y_inc = (CPU_FP32)d_y / steps;
+        
+        CPU_FP32 x = x1;
+        CPU_FP32 y = y1;
+        
+        for(CPU_INT08U i = 0; i <= steps; i++){
+            pixel((CPU_INT08U)round(x), (CPU_INT08U)round(y), color);
+            x += x_inc;
+            y += y_inc;
+        }
+    }
 }
 
+/**
+ * @brief Asteroids draw border
+ *
+ * Draw 1pixel wide border around entire screen in COLOR_GREEN
+ */
+void asteroids_DrawBorder(){
+    oledc_line(0, 0, 0, 95, COLOR_GREEN);
+    oledc_line(0, 0, 95, 0, COLOR_GREEN);
+    oledc_line(0, 95, 95, 95, COLOR_GREEN);
+    oledc_line(95, 0, 95, 95, COLOR_GREEN);
+}
 
+/**
+ * @brief Asteroids game welcome screen
+ *
+ * First screen you see when "booting up" the game, only shows during first boot
+ */
+void asteroids_DrawPreGame(){
+    oledc_set_font(guiFont_Tahoma_7_Regular,COLOR_GREEN,_OLEDC_FO_HORIZONTAL);
+    asteroids_DrawBorder();
+    
+    oledc_line(20, 15, 75, 15, COLOR_GREEN);
+    CPU_INT08U title[] = "ASTEROIDS";
+    oledc_text(title, 20, 25);
+    
+    oledc_line(10, 45, 85, 45, COLOR_GREEN);
+    oledc_line(15, 55, 80, 55, COLOR_GREEN);
+    
+    oledc_line_any(20, 15, 10, 45, COLOR_GREEN);
+    oledc_line_any(75, 15, 85, 45, COLOR_GREEN);
+    
+    oledc_line_any(10, 45, 15, 55, COLOR_GREEN);
+    oledc_line_any(80, 55, 85, 45, COLOR_GREEN);
+    
+    
+    CPU_INT08U subtitle[] = "Press BTN to Start";
+    oledc_text(subtitle, 8, 65);
+}
+
+/**
+ * @brief Asteroids arena
+ *
+ * Draws the main component of the game arena/area without objects
+ */
+void asteroids_DrawArena(){
+    oledc_set_font(guiFont_Tahoma_7_Regular,COLOR_GREEN,_OLEDC_FO_HORIZONTAL);
+    asteroids_DrawBorder();
+}
+
+/**
+ * @brief Asteroids game over
+ *
+ * If game collision ooccured, this screen gets posted
+ * Game over screen for game, and asks for button click to restart game
+ */
+void asteroids_DrawGameOver(){
+    oledc_set_font(guiFont_Tahoma_7_Regular,COLOR_RED,_OLEDC_FO_HORIZONTAL);
+    asteroids_DrawBorder();
+    
+    CPU_INT08U title1[] = "GAME";
+    oledc_text(title1, 20, 25);
+    CPU_INT08U title2[] = "OVER";
+    oledc_text(title2, 30, 25);
+}
+    
 #endif
 
 /* [] END OF FILE */

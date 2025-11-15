@@ -156,8 +156,13 @@ static  void  App_TaskStart (void *p_arg)
     oledc_spiDriverInit();
     OLED_C_PostInit();
     
-
     OSTimeDlyHMSM(0, 0, 2, 0, OS_OPT_TIME_HMSM_STRICT, &err);
+    
+    oledc_fill_screen(0x0000);
+    
+    asteroids_DrawPreGame();
+
+    OSTimeDlyHMSM(0, 0, 10, 0, OS_OPT_TIME_HMSM_STRICT, &err);
     
     
     
