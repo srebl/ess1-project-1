@@ -19,6 +19,8 @@
 #define MIN_ASTEROID_SIZE 1
 #define MAX_ASTEROID_SIZE 20
   
+#define MAX_PLAYER_SPEED 8
+  
 #include <cpu.h>
 
 typedef struct{

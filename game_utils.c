@@ -95,6 +95,4 @@ CPU_VOID destroy_asteroids(GameState* game_state){
 
 
 
-
-
 /* [] END OF FILE */
