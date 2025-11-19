@@ -59,7 +59,7 @@ static OS_TCB  App_Task_GAME_LOOP_TCB;
 static CPU_STK App_Task_GAME_LOOP_Stk[APP_CFG_TASK_GAME_LOOP_STK_SIZE];
 
 OS_Q msg_q;
-
+OS_SEM gameState_sem;
 static GameState gameState;
 
 /*
@@ -287,7 +287,7 @@ static  void  App_ObjCreate (void)
 {
   /* declare and define function local variables */
   OS_ERR  os_err;
-  
+   OSSemCreate(&gameState_sem,"SEM_GAME_STATE",1,&os_err);
   /* create button semaphore to synchronize button press events */
 }
 
@@ -387,16 +387,35 @@ static  void  App_TaskSENDER (void *p_arg)
 {
   /* declare and define task local variables */
   OS_ERR       os_err;
-    
+      CPU_TS         ts;
     c6dofimu14_axis_t axis_data = {0, 0, 0};
   
   /* prevent compiler warnings */
     (void)p_arg;
-  
+    CPU_INT08S vX =0;
+    CPU_INT08S vY = 0;
+     CPU_INT08U buffer[20];
+       oledc_set_font(guiFont_Tahoma_7_Regular,0xffff,_OLEDC_FO_HORIZONTAL);
   /* start of the endless loop */
   while (DEF_TRUE) {
+    // axis data is generally between 0 100, but there is also a position where the sensors get the max
+   
     c6dofimu14_read_accel_axis(&axis_data);
-    OSQPost(&msg_q, &axis_data, MESSAGE_SIZE, OS_OPT_POST_FIFO, &os_err);
+    
+    if(axis_data.x > 100){
+      vX = MAX_PLAYER_SPEED;
+    }else{
+      vX = (((axis_data.x / 10)-4) * 2);
+    }
+    if(axis_data.y > 100){
+      vY = MAX_PLAYER_SPEED;
+    }else{
+      vY = (((axis_data.y / 10)-4) * 2);
+    }
+    OSSemPend(&gameState_sem,0,OS_OPT_PEND_BLOCKING,&ts,&os_err);
+    gameState.player.vX = vX;
+    gameState.player.vY = vY;
+    OSSemPost(&gameState_sem,1,&os_err);
     
     /* initiate scheduler */
     OSTimeDlyHMSM(0, 0, 0, 100, 
@@ -446,7 +465,7 @@ static  void  App_TaskRECEIVER (void *p_arg)
     
     //oledc_rectangle(axis_data->x - sizeFactor, axis_data->y - sizeFactor, axis_data->x + sizeFactor, axis_data->y + sizeFactor, 0xffff);
     CPU_INT08U text[] = "score";
-    oledc_text(text, 40,40);
+    //oledc_text(text, 40,40);
     
     /* initiate scheduler */
     OSTimeDlyHMSM(0, 0, 0, 100, 
