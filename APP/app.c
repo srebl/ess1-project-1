@@ -415,7 +415,7 @@ static  void  App_TaskSENDER (void *p_arg)
     OSSemPend(&gameState_sem,0,OS_OPT_PEND_BLOCKING,&ts,&os_err);
     gameState.player.vX = vX;
     gameState.player.vY = vY;
-    OSSemPost(&gameState_sem,1,&os_err);
+    OSSemPost(&gameState_sem,OS_OPT_POST_1,&os_err);
     
     /* initiate scheduler */
     OSTimeDlyHMSM(0, 0, 0, 100, 
