@@ -1,6 +1,0 @@
-D:\FH\WS2025\esw_uCOS3_cykit.cydsn\esw_uCOS3_cykit.cyprj|6ef7c366-b190-4891-a78f-80cb448b44f1
-D:\Program Files (x86)\Cypress\PSoC Creator\4.4\PSoC Creator\psoc\content\default\CyAnnotationLibrary\CyAnnotationLibrary.cylib\CyAnnotationLibrary.cyprj|4ba45d19-b4d5-40bd-bf30-7bf75deea1fd
-C:\Users\lukas\OneDrive\Documents\PSoC Creator\4.4\Downloads ( 4.4).cylib\Downloads ( 4.4).cyprj|1236c3b7-0a44-4889-9fb6-511030019493
-D:\Program Files (x86)\Cypress\PSoC Creator\4.4\PSoC Creator\psoc\content\cycomponentlibraryupdates\CyComponentLibraryUpdates.cylib\CyComponentLibraryUpdates.cyprj|f34fcfb0-af01-4f61-bf95-368d4c38d468
-D:\Program Files (x86)\Cypress\PSoC Creator\4.4\PSoC Creator\psoc\content\cycomponentlibrary\CyComponentLibrary.cylib\CyComponentLibrary.cyprj|c5aad4b1-0b1e-49ee-8e52-9c1861052c2f
-D:\Program Files (x86)\Cypress\PSoC Creator\4.4\PSoC Creator\psoc\content\cyprimitives\CyPrimitives.cylib\CyPrimitives.cyprj|f4e39576-3bab-4c75-841b-2beccbb5b13b
