@@ -72,6 +72,7 @@
 #include <bsp_oledc.h>
 #include <entities.h>
 #include <fonts.h>
+#include <game_utils.h>
 
 /*
 *********************************************************************************************************

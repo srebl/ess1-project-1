@@ -19,4 +19,5 @@ CPU_BOOLEAN check_collisions(GameState* game_state);
 CPU_VOID spawn_asteroids(GameState* game_state);
 CPU_VOID calculate_movement(GameState* game_state);
 CPU_VOID destroy_asteroids(GameState* game_state);
+CPU_VOID run_a_frame(GameState* game_state);
 /* [] END OF FILE */
