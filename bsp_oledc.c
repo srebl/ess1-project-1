@@ -659,8 +659,8 @@ void asteroids_DrawPreGame(){
     oledc_line_any(80, 55, 85, 45, COLOR_GREEN);
     
     
-    CPU_INT08U subtitle[] = "Press BTN to Start";
-    oledc_text(subtitle, 8, 65);
+    CPU_INT08U subtitle[] = "Starting soon...";
+    oledc_text(subtitle, 15, 65);
 }
 
 /**
@@ -672,11 +672,14 @@ void asteroids_DrawPreGame(){
  */
 void asteroids_DrawArena(GameState *state){
     oledc_set_font(guiFont_Tahoma_7_Regular,COLOR_WHITE,_OLEDC_FO_HORIZONTAL);
-    asteroids_DrawBorder(COLOR_GREEN);
+    //asteroids_DrawBorder(COLOR_GREEN);
+    
+    oledc_rectangle(2, 2, 20, 10, COLOR_BLACK);
     
     CPU_CHAR cur_score[6];
     itoa(state->player.score, cur_score, 10);
-    oledc_text((CPU_INT08U*)cur_score, 2, 2);
+    oledc_text((CPU_INT08U*)cur_score, 2, 1);
+    
     
 }
 
@@ -707,7 +710,7 @@ void asteroids_DrawGameOver(GameState *state){
     itoa(state->player.score, final_score, 10);
     oledc_text((CPU_INT08U*)final_score, 50, 60);
     
-    CPU_INT08U subtitle[] = "Press BTN to Start";
+    CPU_INT08U subtitle[] = "Flip to Restart";
     oledc_text(subtitle, 8, 75);
 }
     

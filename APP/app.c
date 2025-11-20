@@ -290,6 +290,8 @@ static  void  App_ObjCreate (void)
   /* declare and define function local variables */
   OS_ERR  os_err;
    OSSemCreate(&gameState_sem,"SEM_GAME_STATE",1,&os_err);
+
+    OSQCreate(&msg_q, "Message Queue", MESSAGE_QUEUE_SIZE, &os_err);
   /* create button semaphore to synchronize button press events */
 }
 
@@ -388,39 +390,31 @@ static  void  App_TaskCOM (void *p_arg)
 static  void  App_TaskSENDER (void *p_arg)
 {
   /* declare and define task local variables */
-  OS_ERR       os_err;
-      CPU_TS         ts;
+    OS_ERR       os_err;
+    CPU_TS         ts;
     c6dofimu14_axis_t axis_data = {0, 0, 0};
   
   /* prevent compiler warnings */
     (void)p_arg;
     CPU_INT08S vX =0;
     CPU_INT08S vY = 0;
-     CPU_INT08U buffer[20];
-       oledc_set_font(guiFont_Tahoma_7_Regular,0xffff,_OLEDC_FO_HORIZONTAL);
+    CPU_INT08U buffer[20];
+    
+    oledc_set_font(guiFont_Tahoma_7_Regular,0xffff,_OLEDC_FO_HORIZONTAL);
+    
+    OSTimeDlyHMSM(0, 0, 0, 100, OS_OPT_TIME_HMSM_STRICT, &os_err);
+    
   /* start of the endless loop */
   while (DEF_TRUE) {
     // axis data is generally between 0 100, but there is also a position where the sensors get the max
-   
     c6dofimu14_read_accel_axis(&axis_data);
     
-    if(axis_data.x > 100){
-      vX = MAX_PLAYER_SPEED;
-    }else{
-      vX = (((axis_data.x / 10)-4) * 2);
-    }
-    if(axis_data.y > 100){
-      vY = MAX_PLAYER_SPEED;
-    }else{
-      vY = (((axis_data.y / 10)-4) * 2);
-    }
-    OSSemPend(&gameState_sem,0,OS_OPT_PEND_BLOCKING,&ts,&os_err);
-    gameState.player.vX = vX;
-    gameState.player.vY = vY;
-    OSSemPost(&gameState_sem,OS_OPT_POST_1,&os_err);
+    gameState.mode = GAME_MODE_RUNNING;
+    
+    OSQPost(&msg_q, &axis_data, sizeof(axis_data), OS_OPT_POST_FIFO, &os_err);
     
     /* initiate scheduler */
-    OSTimeDlyHMSM(0, 0, 0, 100, 
+    OSTimeDlyHMSM(0, 0, 0, 10, 
                   OS_OPT_TIME_HMSM_STRICT, 
                   &os_err);
   }
@@ -452,25 +446,44 @@ static  void  App_TaskRECEIVER (void *p_arg)
     c6dofimu14_axis_t *axis_data;
     c6dofimu14_axis_t old_data = {46, 46, 0}; //middle, no z
     
-    oledc_fill_screen(0x0000);
+    //oledc_fill_screen(COLOR_BLACK);
     
-    CPU_INT08U sizeFactor = 1;
+    CPU_INT08U sizeFactor = 2;
     CPU_INT08U z_axis = 0;
     CPU_INT08U range = 3;
-    oledc_set_font(guiFont_Tahoma_7_Regular,0xffff,_OLEDC_FO_HORIZONTAL);
+    //oledc_set_font(guiFont_Tahoma_7_Regular,COLOR_WHITE,_OLEDC_FO_HORIZONTAL);
   /* prevent compiler warnings */
     (void)p_arg;
   
   /* start of the endless loop */
   while (DEF_TRUE) {
-    axis_data = (c6dofimu14_axis_t*)OSQPend(&msg_q, 20, OS_OPT_PEND_NON_BLOCKING, &size, &ts, &os_err);
+    
+    axis_data = (c6dofimu14_axis_t*)OSQPend(&msg_q, 0, OS_OPT_PEND_NON_BLOCKING, &size, &ts, &os_err);
+    OSQFlush(&msg_q, &os_err);
     
     //oledc_rectangle(axis_data->x - sizeFactor, axis_data->y - sizeFactor, axis_data->x + sizeFactor, axis_data->y + sizeFactor, 0xffff);
-    CPU_INT08U text[] = "score";
+    //CPU_INT08U text[] = "score";
     //oledc_text(text, 40,40);
     
+    if((os_err == OS_ERR_NONE) && (axis_data != NULL)){
+        //oledc_rectangle(old_data.x, old_data.y, old_data.x + sizeFactor, old_data.y + sizeFactor, COLOR_BLACK);
+        OSSemPend(&gameState_sem, 0, OS_OPT_PEND_NON_BLOCKING, &ts, &os_err);
+        gameState.player.x = old_data.x;
+        gameState.player.y = old_data.y;
+        
+        old_data = *axis_data;
+        
+        gameState.player.vX = axis_data->x;
+        gameState.player.vY = axis_data->y;
+        
+        
+        OSSemPost(&gameState_sem, OS_OPT_POST_1, &os_err);
+        
+        //oledc_rectangle(old_data.x, old_data.y, old_data.x + sizeFactor, old_data.y + sizeFactor, COLOR_GREEN);
+    }
+    
     /* initiate scheduler */
-    OSTimeDlyHMSM(0, 0, 0, 100, 
+    OSTimeDlyHMSM(0, 0, 0, 10, 
                   OS_OPT_TIME_HMSM_STRICT, 
                   &os_err);
   }
@@ -501,11 +514,54 @@ static void App_Task_GAME_LOOP(void *p_arg){
     /* prevent compiler warnings */
     (void)p_arg;
     
+    CPU_INT32U lastScoreTick = OSTimeGet(&os_err);
+    
+    const CPU_INT16U SCORE_PERIOD_MS = 1000;   // 5000 ms = 5 seconds per point
+    const CPU_INT16U LOOP_DELAY_MS   = 10;     // must match the delay below
+
+    CPU_INT32U elapsed_ms = 0;
+    
+    oledc_fill_screen(COLOR_BLACK);
+    asteroids_DrawBorder(COLOR_GREEN);
+    
+    CPU_INT08U sizeFactor = 3;
+    
     /* start of the endless loop */ 
     while (DEF_TRUE) {
+        CPU_INT32U now = OSTimeGet(&os_err);
+        
+        
+        if(gameState.mode == GAME_MODE_RUNNING){
+            elapsed_ms += LOOP_DELAY_MS;
+
+            if (elapsed_ms >= SCORE_PERIOD_MS) {
+                elapsed_ms -= SCORE_PERIOD_MS;   // keep remainder for accuracy
+                gameState.player.score++;
+            }
+            
+            asteroids_DrawArena(&gameState);
+            
+            //other shit
+            OSSemPend(&gameState_sem, 0, OS_OPT_PEND_NON_BLOCKING, &ts, &os_err);
+            oledc_rectangle(gameState.player.x, gameState.player.y, gameState.player.x + sizeFactor, gameState.player.y + sizeFactor, COLOR_BLACK);
+            
+            oledc_rectangle(gameState.player.vX, gameState.player.vY, gameState.player.vX + sizeFactor, gameState.player.vY + sizeFactor, COLOR_RED);
+            
+            OSSemPost(&gameState_sem, OS_OPT_POST_1, &os_err);
+            
+        } else if(gameState.mode == GAME_MODE_GAME_OVER){
+            asteroids_DrawGameOver(&gameState);
+            
+            //other shit
+            
+            
+            
+            
+        }
+        
         
         /* initiate scheduler */
-        OSTimeDlyHMSM(0, 0, 0, 10, OS_OPT_TIME_HMSM_STRICT, &os_err);
+        OSTimeDlyHMSM(0, 0, 0, 20, OS_OPT_TIME_HMSM_STRICT, &os_err);
     }
 }
 
