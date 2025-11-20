@@ -5,7 +5,7 @@
 *
 * Filename      : app.c
 * Version       : V1.00
-* Programmer(s) : Lukas Buchmayer
+* Programmer(s) : Lukas Buchmayer, Gavrilo Stanic, Zobay Rahimi, Sebastian Rath
                   
 *********************************************************************************************************
 */
@@ -156,10 +156,12 @@ static  void  App_TaskStart (void *p_arg)
     oledc_spiDriverInit();
     OLED_C_PostInit();
     
-
-    OSTimeDlyHMSM(0, 0, 2, 0, OS_OPT_TIME_HMSM_STRICT, &err);
+    OSTimeDlyHMSM(0, 0, 1, 0, OS_OPT_TIME_HMSM_STRICT, &err);
     
+    oledc_fill_screen(COLOR_BLACK);
+    asteroids_DrawPreGame();
     
+    OSTimeDlyHMSM(0, 0, 3, 0, OS_OPT_TIME_HMSM_STRICT, &err);
     
     init_i2c();
     c6dofimu14_init();
