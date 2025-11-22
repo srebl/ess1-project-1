@@ -73,6 +73,7 @@
 #include <entities.h>
 #include <fonts.h>
 #include <game_utils.h>
+#include <render_utils.h>
 
 /*
 *********************************************************************************************************

@@ -14,12 +14,10 @@
 
 CPU_BOOLEAN check_collisions(GameState* game_state) {
   for (int i = 0; i < MAX_ASTEROIDS; i++) {
-    if (
-      game_state->player.x < game_state->asteroids[i].x + game_state->asteroids[i].size &&
-      game_state->player.x + game_state->player.size > game_state->asteroids[i].x &&
+    if (game_state->player.x < game_state->asteroids[i].x + game_state->asteroids[i].size &&
+      game_state->player.x + game_state->player.size > game_state->asteroids[i].x && // Use fixed size
       game_state->player.y < game_state->asteroids[i].y + game_state->asteroids[i].size &&
-      game_state->player.y + game_state->player.size > game_state->asteroids[i].y
-    ) {
+      game_state->player.y + game_state->player.size > game_state->asteroids[i].y) {
       return 1; // Collision detected
     }
   }
@@ -169,6 +167,7 @@ CPU_VOID run_a_frame(GameState* game_state){
   calculate_movement(game_state);
   spawn_asteroids(game_state);
   destroy_asteroids(game_state);
+check_collisions(game_state);
 }
 
 

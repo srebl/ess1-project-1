@@ -65,30 +65,12 @@ OS_Q msg_q;
 OS_SEM gameState_sem;
 OS_SEM frame_buffer_sem;
 static GameState gameState;
-typedef struct {
-  CPU_INT08U x;
-  CPU_INT08U y;
-}Pixel;
-
-typedef struct {
-  CPU_INT08S x;
-  CPU_INT08S y;
-  CPU_INT08U width;
-  CPU_INT08U height;
-}Rectangle;
-
-static Pixel frame_buffer [MAX_ASTEROID_SIZE * MAX_ASTEROID_SIZE * MAX_ASTEROIDS];
-static Pixel old_frame_buffer [MAX_ASTEROID_SIZE * MAX_ASTEROID_SIZE * MAX_ASTEROIDS];
 
 static Rectangle rectangle_frame_buffer [MAX_ASTEROIDS];
 
 static Rectangle rectangle_frame_buffer_copy [MAX_ASTEROIDS];
 static Rectangle rectangle_frame_buffer_display [MAX_ASTEROIDS];
 static Rectangle old_rectangle_frame_buffer [MAX_ASTEROIDS];
-
-
-//gemini code
-
 
 
 
@@ -493,59 +475,6 @@ static  void  App_TaskSENDER (void *p_arg)
 * Note(s)     : none
 *********************************************************************************************************
 */
-
-// Helper to check if a value is valid (not -1)
-// Assuming your rectangle struct has x, y, width, height
-void delete_slivers(Rectangle oldRect, Rectangle newRect) {
-    
-    // 1. Safety: If old rect didn't exist, nothing to delete
-    if (oldRect.x == -1) return;
-
-    // 2. Case: Asteroid Died (New rect is -1). Erase the WHOLE old one.
-    if (newRect.x == -1) {
-        oledc_rectangle(oldRect.x, oldRect.y, 
-                        oldRect.x + oldRect.width, 
-                        oldRect.y + oldRect.height, 0x0000);
-        return;
-    }
-
-    // 3. Calculate the edges for easier comparison
-    CPU_INT08S old_x2 = oldRect.x + oldRect.width;
-    CPU_INT08S old_y2 = oldRect.y + oldRect.height;
-    CPU_INT08S new_x2 = newRect.x + newRect.width;
-    CPU_INT08S new_y2 = newRect.y + newRect.height;
-
-    // --- HORIZONTAL STRIPS ---
-
-    // Case A: Moved Right (New X > Old X) -> Erase the Left sliver of Old
-    if (newRect.x > oldRect.x) {
-        // Erase from Old_X to New_X
-        // Note: We clamp the height to the "intersection" to avoid over-erasing corners 
-        // but drawing black on black is safe, so we can just erase the full strip height.
-        oledc_rectangle(oldRect.x, oldRect.y, newRect.x, old_y2, 0x0000);
-    }
-    
-    // Case B: Moved Left (New Right < Old Right) -> Erase the Right sliver of Old
-    if (new_x2 < old_x2) {
-        // Erase from New_X2 to Old_X2
-        oledc_rectangle(new_x2, oldRect.y, old_x2, old_y2, 0x0000);
-    }
-
-    // --- VERTICAL STRIPS ---
-    // Note: We must be careful not to erase what we just drew if the updates are interleaved,
-    // but since we only draw Black here, it's safe.
-
-    // Case C: Moved Down (New Y > Old Y) -> Erase Top sliver
-    if (newRect.y > oldRect.y) {
-        oledc_rectangle(oldRect.x, oldRect.y, old_x2, newRect.y, 0x0000);
-    }
-
-    // Case D: Moved Up (New Bottom < Old Bottom) -> Erase Bottom sliver
-    if (new_y2 < old_y2) {
-        oledc_rectangle(oldRect.x, new_y2, old_x2, old_y2, 0x0000);
-    }
-}
-
 static  void  App_TaskRECEIVER (void *p_arg)
 {
   /* declare and define task local variables */
@@ -558,6 +487,9 @@ static  void  App_TaskRECEIVER (void *p_arg)
     c6dofimu14_axis_t *axis_data;
     c6dofimu14_axis_t old_data = {46, 46, 0}; //middle, no z
     
+    CPU_INT08U prev_player[2] = {0, 0};
+    
+    
     CPU_INT08U sizeFactor = 2;
     CPU_INT08U z_axis = 0;
     CPU_INT08U range = 3;
@@ -566,11 +498,10 @@ static  void  App_TaskRECEIVER (void *p_arg)
         old_rectangle_frame_buffer[i].x = -1;
         rectangle_frame_buffer_copy[i].x = -1;
         rectangle_frame_buffer[i].x = -1;
-    }
-    
+    }    
     
     oledc_fill_screen(COLOR_BLACK);
-    asteroids_DrawBorder(COLOR_GREEN);
+    //asteroids_DrawBorder(COLOR_GREEN);
     
     
   /* prevent compiler warnings */
@@ -578,6 +509,15 @@ static  void  App_TaskRECEIVER (void *p_arg)
   
   /* start of the endless loop */
   while (DEF_TRUE) {
+    
+    if(gameState.mode == GAME_MODE_RUNNING){
+        asteroids_DrawBorder(COLOR_GREEN);
+        asteroids_DrawArena(&gameState);
+            
+    } else if(gameState.mode == GAME_MODE_GAME_OVER){
+        asteroids_DrawGameOver(&gameState);
+        
+    }
     asteroids_DrawArena(&gameState);
     
     OSSemPend(&frame_buffer_sem,0,OS_OPT_PEND_BLOCKING,&ts,&os_err);
@@ -603,24 +543,17 @@ static  void  App_TaskRECEIVER (void *p_arg)
         old_rectangle_frame_buffer[i] = rectangle_frame_buffer_display[i];
     }
     
-    if((os_err == OS_ERR_NONE) && (axis_data != NULL)){
-        //oledc_rectangle(old_data.x, old_data.y, old_data.x + sizeFactor, old_data.y + sizeFactor, COLOR_BLACK);
-        //OSSemPend(&gameState_sem, 0, OS_OPT_PEND_NON_BLOCKING, &ts, &os_err);
-        //gameState.player.x = old_data.x;
-        //gameState.player.y = old_data.y;
-        
-        old_data = *axis_data;
-        
-        //gameState.player.vX = axis_data->x;
-        //gameState.player.vY = axis_data->y;
-        
-        
-        //OSSemPost(&gameState_sem, OS_OPT_POST_1, &os_err);
-        
-        //oledc_rectangle(old_data.x, old_data.y, old_data.x + sizeFactor, old_data.y + sizeFactor, COLOR_GREEN);
-    }
+    
+    //draw player
+    OSSemPend(&gameState_sem, 0, OS_OPT_PEND_BLOCKING, &ts, &os_err);
+    
+    draw_player(gameState.player.x, gameState.player.y, prev_player[0], prev_player[1]);
+    
+    prev_player[0] = gameState.player.x;
+    prev_player[1] = gameState.player.y;
     
     
+    OSSemPost(&gameState_sem, OS_OPT_POST_1, &os_err);
     
     /* initiate scheduler */
     OSTimeDlyHMSM(0, 0, 0, 50, 
@@ -649,18 +582,18 @@ static void App_Task_GAME_LOOP(void *p_arg){
     OS_ERR os_err;
     OS_MSG_SIZE size;
     CPU_TS ts;
-
-    
+    gameState.player.x = 45;
+    gameState.player.y = 45;
+    gameState.player.size = 7;
     /* prevent compiler warnings */
     (void)p_arg;
     
     CPU_INT32U lastScoreTick = OSTimeGet(&os_err);
     
-    const CPU_INT16U SCORE_PERIOD_MS = 1000;   // 5000 ms = 5 seconds per point
+    const CPU_INT16U SCORE_PERIOD_MS = 100;   // 5000 ms = 5 seconds per point
     const CPU_INT16U LOOP_DELAY_MS   = 10;     // must match the delay below
 
     CPU_INT32U elapsed_ms = 0;
-    
     
     CPU_INT08U sizeFactor = 3;
     
@@ -678,15 +611,12 @@ static void App_Task_GAME_LOOP(void *p_arg){
                 gameState.player.score++;
             }
             
-            //asteroids_DrawArena(&gameState);
+            
+            
             
         } else if(gameState.mode == GAME_MODE_GAME_OVER){
-            asteroids_DrawGameOver(&gameState);
             
             //other shit
-            
-            
-            
             
         }
         

@@ -671,15 +671,36 @@ void asteroids_DrawPreGame(){
  * Draws the main component of the game arena/area without objects
  */
 void asteroids_DrawArena(GameState *state){
+    /*
     oledc_set_font(guiFont_Tahoma_7_Regular,COLOR_WHITE,_OLEDC_FO_HORIZONTAL);
     //asteroids_DrawBorder(COLOR_GREEN);
     
     oledc_rectangle(2, 2, 20, 10, COLOR_BLACK);
     
-    CPU_CHAR cur_score[6];
+    CPU_CHAR cur_score[5];
     itoa(state->player.score, cur_score, 10);
     oledc_text((CPU_INT08U*)cur_score, 2, 1);
+    */
     
+    //gemini code
+    oledc_set_font(guiFont_Tahoma_7_Regular,COLOR_WHITE,_OLEDC_FO_HORIZONTAL);
+
+    CPU_CHAR cur_score[5]; // Should be large enough for max possible score
+    itoa(state->player.score, cur_score, 10);
+
+    size_t score_len = strlen(cur_score);
+
+    const CPU_INT08U CHAR_WIDTH = 7;
+
+    CPU_INT08U rect_width = (score_len * CHAR_WIDTH) + 2; 
+
+    const CPU_INT08U RECT_X_START = 2; // Start X position for the background (a little before the text)
+    const CPU_INT08U RECT_Y_START = 1; // Start Y position for the background
+    const CPU_INT08U RECT_HEIGHT = 10; // Height to cover the text (e.g., 7px font + 1px top + 1px bottom)
+
+    oledc_rectangle(RECT_X_START, RECT_Y_START, RECT_X_START + rect_width, RECT_Y_START + RECT_HEIGHT, COLOR_BLACK);
+
+    oledc_text((CPU_INT08U*)cur_score, RECT_X_START + 1, RECT_Y_START + 1);
     
 }
 
@@ -713,7 +734,51 @@ void asteroids_DrawGameOver(GameState *state){
     CPU_INT08U subtitle[] = "Flip to Restart";
     oledc_text(subtitle, 8, 75);
 }
+
+/**
+ * @brief Draw triangle with coordinate as middle point
+ *
+ * @param[in] x         center x coordinate
+ * @param[in] y         center y coordinate
+ * @param[in] color     string
+ *
+ * Draws an equilateral triangle with the given coordinates as its cetner
+ */
+void oledc_triangle(CPU_INT08U x, CPU_INT08U y, CPU_INT16U color){
+    const CPU_INT08U widths[] = {1, 1, 3, 3, 5, 5, 7};
+    const CPU_INT08U offsets[] = {0, 0, 1, 1, 2, 2, 3}; 
     
+    CPU_INT08U current_y = y - 3; 
+    
+    for (int i = 0; i < 7; i++) {
+        CPU_INT08U w = widths[i];
+        CPU_INT08U offset = offsets[i];
+
+        CPU_INT08U start_x = x - offset;
+        CPU_INT08U end_x = start_x + w;
+        
+        oledc_rectangle(start_x, current_y, end_x, current_y + 1, color);
+        
+        current_y++;
+    }
+}
+
+/**
+ * @brief Draw player and delete previous position
+ *
+ * @param[in] x         center x coordinate current
+ * @param[in] y         center y coordinate current
+ * @param[in] x_past    center x coordinate past frame
+ * @param[in] y_past    center y coordinate past frame
+ * @param[in] color     string
+ *
+ * Draws an equilateral triangle with the given coordinates as its cetner
+ */
+void draw_player(CPU_INT08U x, CPU_INT08U y, CPU_INT08U x_past, CPU_INT08U y_past){
+    oledc_triangle(x_past, y_past, COLOR_BLACK);
+    oledc_triangle(x, y, COLOR_RED);
+}
+   
 #endif
 
 /* [] END OF FILE */

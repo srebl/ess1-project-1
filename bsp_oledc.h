@@ -300,6 +300,29 @@ void asteroids_DrawArena(GameState *state);
  */
 void asteroids_DrawGameOver(GameState *state);
 
+/**
+ * @brief Draw triangle with coordinate as middle point
+ *
+ * @param[in] x         center x coordinate
+ * @param[in] y         center y coordinate
+ * @param[in] color     string
+ *
+ * Draws an equilateral triangle with the given coordinates as its cetner
+ */
+void oledc_triangle(CPU_INT08U x, CPU_INT08U y, CPU_INT16U color);
+
+/**
+ * @brief Draw player and delete previous position
+ *
+ * @param[in] x         center x coordinate current
+ * @param[in] y         center y coordinate current
+ * @param[in] x_past    center x coordinate past frame
+ * @param[in] y_past    center y coordinate past frame
+ * @param[in] color     string
+ *
+ * Draws an equilateral triangle with the given coordinates as its cetner
+ */
+void draw_player(CPU_INT08U x, CPU_INT08U y, CPU_INT08U x_past, CPU_INT08U y_past);
 
 #endif
 
