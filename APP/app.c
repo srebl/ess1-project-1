@@ -86,6 +86,12 @@ static Rectangle rectangle_frame_buffer_copy [MAX_ASTEROIDS];
 static Rectangle rectangle_frame_buffer_display [MAX_ASTEROIDS];
 static Rectangle old_rectangle_frame_buffer [MAX_ASTEROIDS];
 
+
+//gemini code
+
+
+
+
 /*
 *********************************************************************************************************
 *                                         FUNCTION PROTOTYPES
@@ -483,63 +489,106 @@ static  void  App_TaskRECEIVER (void *p_arg)
     OS_MSG_SIZE size;
     CPU_TS ts;
     
-    c6dofimu14_axis_t *axis_data;
-    c6dofimu14_axis_t old_data = {46, 46, 0}; //middle, no z
-    
     //oledc_fill_screen(COLOR_BLACK);
     
     CPU_INT08U sizeFactor = 2;
     CPU_INT08U z_axis = 0;
     CPU_INT08U range = 3;
     oledc_set_font(guiFont_Tahoma_7_Regular,0xffff,_OLEDC_FO_HORIZONTAL);
-     for(CPU_INT08U i = 0; i<MAX_ASTEROIDS ; i++){
-      old_rectangle_frame_buffer[i].x = -1;
-      rectangle_frame_buffer_copy[i].x = -1;
-      rectangle_frame_buffer[i].x = -1;
+    for(CPU_INT08U i = 0; i<MAX_ASTEROIDS ; i++){
+        old_rectangle_frame_buffer[i].x = -1;
+        rectangle_frame_buffer_copy[i].x = -1;
+        rectangle_frame_buffer[i].x = -1;
     }
   /* prevent compiler warnings */
     (void)p_arg;
   
   /* start of the endless loop */
   while (DEF_TRUE) {
+    /*
+    OSSemPend(&frame_buffer_sem,0,OS_OPT_PEND_BLOCKING,&ts,&os_err);
+    for(CPU_INT08U i = 0; i < MAX_ASTEROIDS; i++){
+        rectangle_frame_buffer_display[i] = rectangle_frame_buffer_copy[i];
+    }
     
-      OSSemPend(&frame_buffer_sem,0,OS_OPT_PEND_BLOCKING,&ts,&os_err);
-            for(CPU_INT08U i = 0; i < MAX_ASTEROIDS; i++){
-          rectangle_frame_buffer_display[i] = rectangle_frame_buffer_copy[i];
-        }
-     OSSemPost(&frame_buffer_sem, OS_OPT_POST_1, &os_err);
+    OSSemPost(&frame_buffer_sem, OS_OPT_POST_1, &os_err);
     
     
     for(CPU_INT08U i = 0; i<MAX_ASTEROIDS ; i++){
-      if(old_rectangle_frame_buffer[i].x == -1) continue;
-      oledc_rectangle(old_rectangle_frame_buffer[i].x, old_rectangle_frame_buffer[i].y, old_rectangle_frame_buffer[i].x + old_rectangle_frame_buffer[i].width,
-      old_rectangle_frame_buffer[i].y + old_rectangle_frame_buffer[i].height, 0x0000);
+        if(old_rectangle_frame_buffer[i].x == -1) continue;
+        oledc_rectangle(old_rectangle_frame_buffer[i].x, old_rectangle_frame_buffer[i].y, old_rectangle_frame_buffer[i].x + old_rectangle_frame_buffer[i].width,
+        old_rectangle_frame_buffer[i].y + old_rectangle_frame_buffer[i].height, 0x0000);
     }
-    for(CPU_INT08U i = 0; i<MAX_ASTEROIDS ; i++){
-      if(rectangle_frame_buffer_display[i].x == -1) continue;
-      oledc_rectangle(rectangle_frame_buffer_display[i].x, rectangle_frame_buffer_display[i].y, rectangle_frame_buffer_display[i].x + rectangle_frame_buffer_display[i].width,
-      rectangle_frame_buffer_display[i].y + rectangle_frame_buffer_display[i].height, 0xFFFF);
+    
+    for(CPU_INT08U i = 0; i < MAX_ASTEROIDS ; i++){
+        if(rectangle_frame_buffer_display[i].x == -1) continue;
+        oledc_rectangle(rectangle_frame_buffer_display[i].x, rectangle_frame_buffer_display[i].y, rectangle_frame_buffer_display[i].x + rectangle_frame_buffer_display[i].width,
+        rectangle_frame_buffer_display[i].y + rectangle_frame_buffer_display[i].height, 0xFFFF);
     }
-        for(CPU_INT08U i = 0; i < MAX_ASTEROIDS; i++){
-          old_rectangle_frame_buffer[i] = rectangle_frame_buffer_display[i];
-        }
+    
+    for(CPU_INT08U i = 0; i < MAX_ASTEROIDS; i++){
+        old_rectangle_frame_buffer[i] = rectangle_frame_buffer_display[i];
+    }
     
     if((os_err == OS_ERR_NONE) && (axis_data != NULL)){
         //oledc_rectangle(old_data.x, old_data.y, old_data.x + sizeFactor, old_data.y + sizeFactor, COLOR_BLACK);
         OSSemPend(&gameState_sem, 0, OS_OPT_PEND_NON_BLOCKING, &ts, &os_err);
-        gameState.player.x = old_data.x;
-        gameState.player.y = old_data.y;
+        //gameState.player.x = old_data.x;
+        //gameState.player.y = old_data.y;
         
         old_data = *axis_data;
         
-        gameState.player.vX = axis_data->x;
-        gameState.player.vY = axis_data->y;
+        //gameState.player.vX = axis_data->x;
+        //gameState.player.vY = axis_data->y;
         
         
         OSSemPost(&gameState_sem, OS_OPT_POST_1, &os_err);
         
         //oledc_rectangle(old_data.x, old_data.y, old_data.x + sizeFactor, old_data.y + sizeFactor, COLOR_GREEN);
     }
+    */
+    
+    // --- 1. Copy data from game thread (Data Lock) ---
+        OSSemPend(&frame_buffer_sem,0,OS_OPT_PEND_BLOCKING,&ts,&os_err);
+        for(CPU_INT08U i = 0; i < MAX_ASTEROIDS; i++){
+            rectangle_frame_buffer_display[i] = rectangle_frame_buffer_copy[i];
+        }
+        OSSemPost(&frame_buffer_sem, OS_OPT_POST_1, &os_err);
+
+        // --- 2. Draw to RAM Buffer (Draw/Clear Phase) ---
+
+        // A. Clear old areas (draw black rectangles into the RAM buffer)
+        for(CPU_INT08U i = 0; i<MAX_ASTEROIDS ; i++){
+            if(old_rectangle_frame_buffer[i].x == -1) continue;
+            // *** CALL RAM-BASED RECTANGLE FUNCTION ***
+            ram_rectangle_set(old_rectangle_frame_buffer[i].x, old_rectangle_frame_buffer[i].y, 
+                              old_rectangle_frame_buffer[i].x + old_rectangle_frame_buffer[i].width,
+                              old_rectangle_frame_buffer[i].y + old_rectangle_frame_buffer[i].height, 
+                              COLOR_BLACK); // Assuming COLOR_BLACK is 0x0000
+        }
+        
+        // B. Draw new areas (draw white rectangles into the RAM buffer)
+        for(CPU_INT08U i = 0; i < MAX_ASTEROIDS ; i++){
+            if(rectangle_frame_buffer_display[i].x == -1) continue;
+            // *** CALL RAM-BASED RECTANGLE FUNCTION ***
+            ram_rectangle_set(rectangle_frame_buffer_display[i].x, rectangle_frame_buffer_display[i].y, 
+                              rectangle_frame_buffer_display[i].x + rectangle_frame_buffer_display[i].width,
+                              rectangle_frame_buffer_display[i].y + rectangle_frame_buffer_display[i].height, 
+                              0xFFFF); // Assuming 0xFFFF is COLOR_WHITE
+        }
+
+        // --- 3. Atomic Screen Flush (Fixes Flicker) ---
+        oledc_flush_buffer(oled_ram_buffer, OLEDC_FRAME_BUFFER_SIZE); 
+        // 
+
+        // --- 4. Update old buffer for next frame ---
+        for(CPU_INT08U i = 0; i < MAX_ASTEROIDS; i++){
+            old_rectangle_frame_buffer[i] = rectangle_frame_buffer_display[i];
+        }
+        
+        // ... (rest of the logic for input handling) ...
+
+        // Reduce the delay to increase frame rate and responsiveness
     
     /* initiate scheduler */
     OSTimeDlyHMSM(0, 0, 0, 10, 
@@ -580,7 +629,7 @@ static void App_Task_GAME_LOOP(void *p_arg){
 
     CPU_INT32U elapsed_ms = 0;
     
-    oledc_fill_screen(COLOR_BLACK);
+    //oledc_fill_screen(COLOR_BLACK);
     asteroids_DrawBorder(COLOR_GREEN);
     
     CPU_INT08U sizeFactor = 3;
@@ -601,12 +650,12 @@ static void App_Task_GAME_LOOP(void *p_arg){
             asteroids_DrawArena(&gameState);
             
             //other shit
-            OSSemPend(&gameState_sem, 0, OS_OPT_PEND_NON_BLOCKING, &ts, &os_err);
-            oledc_rectangle(gameState.player.x, gameState.player.y, gameState.player.x + sizeFactor, gameState.player.y + sizeFactor, COLOR_BLACK);
+            //OSSemPend(&gameState_sem, 0, OS_OPT_PEND_NON_BLOCKING, &ts, &os_err);
+            //oledc_rectangle(gameState.player.x, gameState.player.y, gameState.player.x + sizeFactor, gameState.player.y + sizeFactor, COLOR_BLACK);
             
-            oledc_rectangle(gameState.player.vX, gameState.player.vY, gameState.player.vX + sizeFactor, gameState.player.vY + sizeFactor, COLOR_RED);
+            //oledc_rectangle(gameState.player.vX, gameState.player.vY, gameState.player.vX + sizeFactor, gameState.player.vY + sizeFactor, COLOR_RED);
             
-            OSSemPost(&gameState_sem, OS_OPT_POST_1, &os_err);
+            //OSSemPost(&gameState_sem, OS_OPT_POST_1, &os_err);
             
         } else if(gameState.mode == GAME_MODE_GAME_OVER){
             asteroids_DrawGameOver(&gameState);
@@ -623,7 +672,7 @@ static void App_Task_GAME_LOOP(void *p_arg){
         run_a_frame(&gameState);
         OSSemPost(&gameState_sem, OS_OPT_POST_1, &os_err);
         /* initiate scheduler */
-        OSTimeDlyHMSM(0, 0, 0, 50, OS_OPT_TIME_HMSM_STRICT, &os_err);
+        OSTimeDlyHMSM(0, 0, 0, 10, OS_OPT_TIME_HMSM_STRICT, &os_err);
     }
 }
 
@@ -664,56 +713,58 @@ static void App_Task_RENDERER(void *p_arg){
           }
         }
         */
+        
+        /*
         for(CPU_INT08U i = 0; i< MAX_ASTEROIDS; i++){
-          if(!asteroids[i].is_active) continue;
-           CPU_INT08S x = asteroids[i].x;
-           CPU_INT08S y = asteroids[i].y;
-           CPU_INT08U size = asteroids[i].size;
-          CPU_INT08U max_width = size;
-          CPU_INT08U max_height = size;
+            if(!asteroids[i].is_active) continue;
+            CPU_INT08S x = asteroids[i].x;
+            CPU_INT08S y = asteroids[i].y;
+            CPU_INT08U size = asteroids[i].size;
+            CPU_INT08U max_width = size;
+            CPU_INT08U max_height = size;
           
-           CPU_BOOLEAN found = false;
+            CPU_BOOLEAN found = false;
           // get x
-          if(x < 0 ){
-            if(x + size <= 0){
-              x = -1;
-            }else{
+            if(x < 0 ){
+                if(x + size <= 0){
+                    x = -1;
+                } else {
               // x is negative
-              max_width = size + x;
-              x = 0;
+                    max_width = size + x;
+                    x = 0;
+                }
+            } else if(x > 95){
+                x = -1;
             }
-          }else if (x > 95){
-            x = -1;
-          }
           // get y
-          if(y < 0 ){
-            if(y + size <= 0){
-              y = -1;
-            }else{
+            if(y < 0 ){
+                if(y + size <= 0){
+                y = -1;
+                } else {
               // x is negative
-              max_height = size + y;
-              y = 0;
+                    max_height = size + y;
+                    y = 0;
+                }
+            } else if (y > 95){
+                y = -1;
             }
-          }else if (y > 95){
-            y = -1;
-          }
           
-          if(x == -1 || y == -1){
+            if(x == -1 || y == -1){
             // not found asteroid (not active probably)
                rectangle_frame_buffer[frame_buffer_counter].x = -1;
-            continue;
-          }
+                continue;
+            }
           
          // if(asteroids[i].x + i < 0 || asteroids[i].x + i > 96 || asteroids[i].y + i < 0 || asteroids[i].y +i > 96) continue;
           
           // get width
-          CPU_INT08U width = 0;
-          for(CPU_INT08U j = 0; j< max_width; j++){
-            width = j;
-            if(!(x + j + 1 <= 96 && j+1 < max_width)) break;
-          }
+            CPU_INT08U width = 0;
+            for(CPU_INT08U j = 0; j< max_width; j++){
+                width = j;
+                if(!(x + j + 1 <= 96 && j+1 < max_width)) break;
+            }
           // height
-          CPU_INT08U height = 0;
+            CPU_INT08U height = 0;
           for(CPU_INT08U j = 0; j < max_height; j++){
              height = j;
              if(!(y + j + 1 <= 96 && j+1 < max_height)) break;
@@ -735,8 +786,56 @@ static void App_Task_RENDERER(void *p_arg){
         //frame_buffer[frame_buffer_counter].x = -1;
         //frame_buffer[frame_buffer_counter].y = -1;
         
+        */
+        
+        for(CPU_INT08U i = 0; i < MAX_ASTEROIDS; i++){
+            // Reset the rectangle buffer for this asteroid index
+            rectangle_frame_buffer[i].x = -1; 
+            
+            if(!asteroids[i].is_active) continue;
+
+            CPU_INT08S x_start = asteroids[i].x;
+            CPU_INT08S y_start = asteroids[i].y;
+            CPU_INT08U size = asteroids[i].size;
+            
+            // Calculate clipping: The coordinates that are actually on the screen (0 to 95)
+            
+            CPU_INT08S x_visible_min = (x_start < 0) ? 0 : x_start;
+            CPU_INT08S y_visible_min = (y_start < 0) ? 0 : y_start;
+            
+            CPU_INT08S x_end = x_start + size;
+            CPU_INT08S y_end = y_start + size;
+            
+            CPU_INT08S x_visible_max = (x_end > 96) ? 96 : x_end;
+            CPU_INT08S y_visible_max = (y_end > 96) ? 96 : y_end;
+            
+            // Check if asteroid is entirely off-screen (should be caught by destroy_asteroids, 
+            // but this is a fail-safe for rendering):
+            if (x_visible_min >= x_visible_max || y_visible_min >= y_visible_max) {
+                // Entirely off-screen
+                continue; 
+            }
+            
+            // Populate the frame buffer for the visible portion
+            rectangle_frame_buffer[i].x = x_visible_min;
+            rectangle_frame_buffer[i].y = y_visible_min;
+            // Width/Height = max_coord - min_coord
+            rectangle_frame_buffer[i].width = x_visible_max - x_visible_min;
+            rectangle_frame_buffer[i].height = y_visible_max - y_visible_min;
+        }
+
+        // --- 3. Update Render Buffer (Write Lock) ---
+        OSSemPend(&frame_buffer_sem, 0, OS_OPT_PEND_BLOCKING, &ts, &os_err);
+        
+        // CRITICAL FIX: Copy the *entire* array to ensure inactive/deleted asteroids 
+        // are correctly marked as x = -1 in the copy buffer.
+        for(CPU_INT08U i = 0; i < MAX_ASTEROIDS; i++){
+            rectangle_frame_buffer_copy[i] = rectangle_frame_buffer[i];
+        }
+        
+        OSSemPost(&frame_buffer_sem, OS_OPT_POST_1, &os_err);
         /* initiate scheduler */
-        OSTimeDlyHMSM(0, 0, 0, 20, OS_OPT_TIME_HMSM_STRICT, &os_err);
+        OSTimeDlyHMSM(0, 0, 0, 10, OS_OPT_TIME_HMSM_STRICT, &os_err);
     }
 }
 

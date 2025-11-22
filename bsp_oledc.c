@@ -31,6 +31,9 @@
     
 
 OS_ERR os_err;
+    
+    
+CPU_INT08U oled_ram_buffer[OLEDC_FRAME_BUFFER_SIZE];
 
 /*
 *********************************************************************************************************
@@ -712,6 +715,57 @@ void asteroids_DrawGameOver(GameState *state){
     
     CPU_INT08U subtitle[] = "Flip to Restart";
     oledc_text(subtitle, 8, 75);
+}
+
+//gemini code
+// Helper function to set a pixel in the RAM buffer
+void ram_pixel_set(CPU_INT08U col, CPU_INT08U row, CPU_INT16U color) {
+    if (col >= _OLEDC_SCREEN_WIDTH || row >= _OLEDC_SCREEN_HEIGHT) {
+        return;
+    }
+    
+    // Calculate index: (row * width + col) * bytes_per_pixel
+    CPU_INT32U index = ((CPU_INT32U)row * _OLEDC_SCREEN_WIDTH + col) * 2; 
+
+    // Store high byte (color >> 8) then low byte (color & 0x00FF)
+    // assuming your library's color data is arranged this way (SSD1351 usually is).
+    oled_ram_buffer[index] = color >> 8;
+    oled_ram_buffer[index + 1] = color & 0x00FF;
+}
+
+// Helper function to draw a RAM-based rectangle (infill)
+void ram_rectangle_set(CPU_INT08U start_col, CPU_INT08U start_row, CPU_INT08U end_col, CPU_INT08U end_row, CPU_INT16U color) {
+    for (CPU_INT08U r = start_row; r < end_row; r++) {
+        for (CPU_INT08U c = start_col; c < end_col; c++) {
+            ram_pixel_set(c, r, color);
+        }
+    }
+}
+
+// Function to flush the entire RAM buffer to the OLED display
+void oledc_flush_buffer(const CPU_INT08U *buffer, CPU_INT16U size)
+{
+    CPU_INT08U cmd = _OLEDC_WRITE_RAM;
+    const CPU_INT08U* ptr = buffer;
+    CPU_INT16U cnt = size / 2; // size is in bytes, cnt is number of pixels (16-bit color)
+
+    // 1. Set the entire screen area as the target
+    CPU_INT08U cols_flush[2] = { _OLEDC_COL_OFF, _OLEDC_COL_OFF + _OLEDC_SCREEN_WIDTH - 1 };
+    CPU_INT08U rows_flush[2] = { _OLEDC_ROW_OFF, _OLEDC_ROW_OFF + _OLEDC_SCREEN_HEIGHT - 1 };
+
+    oledc_command(_OLEDC_SET_COL_ADDRESS, cols_flush, 2);
+    oledc_command(_OLEDC_SET_ROW_ADDRESS, rows_flush, 2);
+    
+    // 2. Start RAM write command
+    hal_gpio_csSet(LOW);
+    hal_gpio_dcSet(LOW);
+    hal_spiWrite(&cmd, 1);
+    hal_gpio_dcSet(HIGH);
+    
+    // 3. Transfer the whole buffer (18432 bytes)
+    hal_spiWrite(ptr, size); // Send the whole buffer at once
+
+    hal_gpio_csSet(HIGH);
 }
     
 #endif
