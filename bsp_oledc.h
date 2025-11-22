@@ -64,9 +64,6 @@
 
 #define __OLEDC_DRV_SPI__
     
-#define OLEDC_TOTAL_PIXELS 9216
-#define OLEDC_FRAME_BUFFER_SIZE (OLEDC_TOTAL_PIXELS * 2)
-extern CPU_INT08U oled_ram_buffer[OLEDC_FRAME_BUFFER_SIZE];
 
 /*
 *********************************************************************************************************
@@ -302,14 +299,6 @@ void asteroids_DrawArena(GameState *state);
  * Game over screen for game, and asks for button click to restart game
  */
 void asteroids_DrawGameOver(GameState *state);
-
-
-
-//gemini code
-void ram_pixel_set(CPU_INT08U col, CPU_INT08U row, CPU_INT16U color);
-void ram_rectangle_set(CPU_INT08U start_col, CPU_INT08U start_row, CPU_INT08U end_col, CPU_INT08U end_row, CPU_INT16U color);
-void oledc_flush_buffer(const CPU_INT08U *buffer, CPU_INT16U size);
-
 
 
 #endif
