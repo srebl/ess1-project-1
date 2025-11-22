@@ -494,6 +494,58 @@ static  void  App_TaskSENDER (void *p_arg)
 *********************************************************************************************************
 */
 
+// Helper to check if a value is valid (not -1)
+// Assuming your rectangle struct has x, y, width, height
+void delete_slivers(Rectangle oldRect, Rectangle newRect) {
+    
+    // 1. Safety: If old rect didn't exist, nothing to delete
+    if (oldRect.x == -1) return;
+
+    // 2. Case: Asteroid Died (New rect is -1). Erase the WHOLE old one.
+    if (newRect.x == -1) {
+        oledc_rectangle(oldRect.x, oldRect.y, 
+                        oldRect.x + oldRect.width, 
+                        oldRect.y + oldRect.height, 0x0000);
+        return;
+    }
+
+    // 3. Calculate the edges for easier comparison
+    CPU_INT08S old_x2 = oldRect.x + oldRect.width;
+    CPU_INT08S old_y2 = oldRect.y + oldRect.height;
+    CPU_INT08S new_x2 = newRect.x + newRect.width;
+    CPU_INT08S new_y2 = newRect.y + newRect.height;
+
+    // --- HORIZONTAL STRIPS ---
+
+    // Case A: Moved Right (New X > Old X) -> Erase the Left sliver of Old
+    if (newRect.x > oldRect.x) {
+        // Erase from Old_X to New_X
+        // Note: We clamp the height to the "intersection" to avoid over-erasing corners 
+        // but drawing black on black is safe, so we can just erase the full strip height.
+        oledc_rectangle(oldRect.x, oldRect.y, newRect.x, old_y2, 0x0000);
+    }
+    
+    // Case B: Moved Left (New Right < Old Right) -> Erase the Right sliver of Old
+    if (new_x2 < old_x2) {
+        // Erase from New_X2 to Old_X2
+        oledc_rectangle(new_x2, oldRect.y, old_x2, old_y2, 0x0000);
+    }
+
+    // --- VERTICAL STRIPS ---
+    // Note: We must be careful not to erase what we just drew if the updates are interleaved,
+    // but since we only draw Black here, it's safe.
+
+    // Case C: Moved Down (New Y > Old Y) -> Erase Top sliver
+    if (newRect.y > oldRect.y) {
+        oledc_rectangle(oldRect.x, oldRect.y, old_x2, newRect.y, 0x0000);
+    }
+
+    // Case D: Moved Up (New Bottom < Old Bottom) -> Erase Bottom sliver
+    if (new_y2 < old_y2) {
+        oledc_rectangle(oldRect.x, new_y2, old_x2, old_y2, 0x0000);
+    }
+}
+
 static  void  App_TaskRECEIVER (void *p_arg)
 {
   /* declare and define task local variables */
@@ -538,8 +590,7 @@ static  void  App_TaskRECEIVER (void *p_arg)
     
     for(CPU_INT08U i = 0; i<MAX_ASTEROIDS ; i++){
         if(old_rectangle_frame_buffer[i].x == -1) continue;
-        oledc_rectangle(old_rectangle_frame_buffer[i].x, old_rectangle_frame_buffer[i].y, old_rectangle_frame_buffer[i].x + old_rectangle_frame_buffer[i].width,
-        old_rectangle_frame_buffer[i].y + old_rectangle_frame_buffer[i].height, 0x0000);
+        delete_slivers(old_rectangle_frame_buffer[i], rectangle_frame_buffer_display[i]);
     }
     
     for(CPU_INT08U i = 0; i < MAX_ASTEROIDS ; i++){
