@@ -291,6 +291,7 @@ void asteroids_DrawArena();
  */
 void asteroids_DrawGameOver();
 
+void oledc_dma_setup_tx(void);
 #endif
 
 /* [] END OF FILE */

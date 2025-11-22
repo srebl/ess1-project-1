@@ -675,6 +675,19 @@ void asteroids_DrawGameOver(){
     oledc_text(title2, 30, 25);
 }
     
+void oledc_dma_setup_tx(void){
+    CPU_INT08U cmd  = _OLEDC_WRITE_RAM;
+    cols[ 0 ] = _OLEDC_COL_OFF;
+    cols[ 1 ] = _OLEDC_COL_OFF + _OLEDC_SCREEN_WIDTH - 1;
+    rows[ 0 ] = _OLEDC_ROW_OFF;
+    rows[ 1 ] = _OLEDC_ROW_OFF + _OLEDC_SCREEN_HEIGHT - 1;
+
+    oledc_command( _OLEDC_SET_COL_ADDRESS, cols, 2 );
+    oledc_command( _OLEDC_SET_ROW_ADDRESS, rows, 2 );
+    oledc_command( _OLEDC_WRITE_RAM, NULL, 0 );
+    // DMA now takes over to write to RAM
+}
+
 #endif
 
 /* [] END OF FILE */

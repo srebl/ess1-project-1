@@ -18,7 +18,7 @@
 
 #include <includes.h>
 #include <cyapicallbacks.h>
-
+#include "bsp_oledc_dma.h"
 /*
 *********************************************************************************************************
 *                                             LOCAL DEFINES
@@ -69,6 +69,9 @@ static CPU_STK App_Task_BUTTON_Stk[APP_CFG_TASK_BUTTON_STK_SIZE];
 
 OS_Q msg_q;
 OS_SEM button_sem;
+OS_SEM sem_oled_dma_done;
+OS_SEM sem_render_frame_ready;
+OS_SEM sem_display_new_frame_buffer;
 
 static GameState gameState;
 
@@ -369,6 +372,21 @@ static  void  App_ObjCreate (void)
   // Semaphore für Button (für später, jetzt noch ungenutzt)
   OSSemCreate(&button_sem,
               "Button Sem",
+              0u,        // initialer Zähler = 0
+              &os_err);
+
+  OSSemCreate(&sem_oled_dma_done,
+              "sem_oled_dma_done",
+              0u,        // initialer Zähler = 0
+              &os_err);
+
+  OSSemCreate(&sem_render_frame_ready,
+              "sem_render_frame_ready",
+              0u,        // initialer Zähler = 0
+              &os_err);
+
+  OSSemCreate(&sem_display_new_frame_buffer,
+              "sem_display_new_frame_buffer",
               0u,        // initialer Zähler = 0
               &os_err);
 
@@ -723,10 +741,34 @@ static void App_Task_DISPLAY(void *p_arg){
     /* start of the endless loop */ 
     while (DEF_TRUE) {
         
-        /*später hier DISPLAY-Refresh / Double Refresher*/
-      
+        // wait for new frame to be finished
+        OSSemPend(&sem_render_frame_ready,
+                  0,                         // kein Timeout
+                  OS_OPT_PEND_BLOCKING,
+                  NULL,
+                  &os_err);
+        
+        // swap buffers
+        OLED_DMA_swap_buffer();
+        
+        // signal new buffer is ready
+        OSSemPost(&sem_display_new_frame_buffer, OS_OPT_POST_1, &os_err);
+        
+        // prepare OLED for new data
+        oledc_dma_setup_tx();
+        
+        // draw new frame
+        OLED_DMA_start_tx();
+        
+        // wait for DMA to finish
+        OSSemPend(&sem_oled_dma_done,
+                  0,                         // kein Timeout
+                  OS_OPT_PEND_BLOCKING,
+                  NULL,
+                  &os_err);
+        
         /* initiate scheduler */
-        OSTimeDlyHMSM(0, 0, 0, 10, OS_OPT_TIME_HMSM_STRICT, &os_err);
+        // OSTimeDlyHMSM(0, 0, 0, 1, OS_OPT_TIME_HMSM_STRICT, &os_err);
     }
 }
 
