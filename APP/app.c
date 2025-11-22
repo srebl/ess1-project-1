@@ -58,9 +58,33 @@ static  CPU_STK  App_TaskRECEIVERStk[APP_CFG_TASK_RECEIVER_STK_SIZE];
 static OS_TCB  App_Task_GAME_LOOP_TCB;
 static CPU_STK App_Task_GAME_LOOP_Stk[APP_CFG_TASK_GAME_LOOP_STK_SIZE];
 
+static OS_TCB  App_Task_RENDERER_TCB;
+static CPU_STK App_Task_RENDERER_Stk[APP_CFG_TASK_RENDERER_STK_SIZE];
+
 OS_Q msg_q;
 OS_SEM gameState_sem;
+OS_SEM frame_buffer_sem;
 static GameState gameState;
+typedef struct {
+  CPU_INT08U x;
+  CPU_INT08U y;
+}Pixel;
+
+typedef struct {
+  CPU_INT08S x;
+  CPU_INT08S y;
+  CPU_INT08U width;
+  CPU_INT08U height;
+}Rectangle;
+
+static Pixel frame_buffer [MAX_ASTEROID_SIZE * MAX_ASTEROID_SIZE * MAX_ASTEROIDS];
+static Pixel old_frame_buffer [MAX_ASTEROID_SIZE * MAX_ASTEROID_SIZE * MAX_ASTEROIDS];
+
+static Rectangle rectangle_frame_buffer [MAX_ASTEROIDS];
+
+static Rectangle rectangle_frame_buffer_copy [MAX_ASTEROIDS];
+static Rectangle rectangle_frame_buffer_display [MAX_ASTEROIDS];
+static Rectangle old_rectangle_frame_buffer [MAX_ASTEROIDS];
 
 /*
 *********************************************************************************************************
@@ -78,6 +102,8 @@ static  void  App_ObjCreate  (void);
 static void App_TaskSENDER (void *p_arg);
 static void App_TaskRECEIVER (void *p_arg);
 static void App_Task_GAME_LOOP (void *p_arg);
+
+static void App_Task_RENDERER (void *p_arg);
 
 /*
 *********************************************************************************************************
@@ -265,6 +291,20 @@ OSTaskCreate((OS_TCB      *) &App_Task_GAME_LOOP_TCB,
              (OS_OPT       ) (OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
              (OS_ERR      *) &os_err
             );
+OSTaskCreate((OS_TCB      *) &App_Task_RENDERER_TCB,
+             (CPU_CHAR    *) "Task_RENDERER",
+             (OS_TASK_PTR  ) App_Task_RENDERER, 
+             (void        *) 0,
+             (OS_PRIO      ) APP_CFG_TASK_RENDERER_PRIO,
+             (CPU_STK     *) App_Task_RENDERER_Stk,
+             (CPU_STK_SIZE ) APP_CFG_TASK_RENDERER_STK_SIZE_LIMIT,
+             (CPU_STK_SIZE ) APP_CFG_TASK_RENDERER_STK_SIZE,
+             (OS_MSG_QTY   ) 0u,
+             (OS_TICK      ) 0u,
+             (void        *) 0,
+             (OS_OPT       ) (OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
+             (OS_ERR      *) &os_err
+            );
 }
 
 
@@ -289,9 +329,9 @@ static  void  App_ObjCreate (void)
 {
   /* declare and define function local variables */
   OS_ERR  os_err;
+  
    OSSemCreate(&gameState_sem,"SEM_GAME_STATE",1,&os_err);
-
-    OSQCreate(&msg_q, "Message Queue", MESSAGE_QUEUE_SIZE, &os_err);
+  OSSemCreate(&frame_buffer_sem,"SEM_FRAME_BUFFER",1,&os_err);
   /* create button semaphore to synchronize button press events */
 }
 
@@ -451,19 +491,38 @@ static  void  App_TaskRECEIVER (void *p_arg)
     CPU_INT08U sizeFactor = 2;
     CPU_INT08U z_axis = 0;
     CPU_INT08U range = 3;
-    //oledc_set_font(guiFont_Tahoma_7_Regular,COLOR_WHITE,_OLEDC_FO_HORIZONTAL);
+    oledc_set_font(guiFont_Tahoma_7_Regular,0xffff,_OLEDC_FO_HORIZONTAL);
+     for(CPU_INT08U i = 0; i<MAX_ASTEROIDS ; i++){
+      old_rectangle_frame_buffer[i].x = -1;
+      rectangle_frame_buffer_copy[i].x = -1;
+      rectangle_frame_buffer[i].x = -1;
+    }
   /* prevent compiler warnings */
     (void)p_arg;
   
   /* start of the endless loop */
   while (DEF_TRUE) {
     
-    axis_data = (c6dofimu14_axis_t*)OSQPend(&msg_q, 0, OS_OPT_PEND_NON_BLOCKING, &size, &ts, &os_err);
-    OSQFlush(&msg_q, &os_err);
+      OSSemPend(&frame_buffer_sem,0,OS_OPT_PEND_BLOCKING,&ts,&os_err);
+            for(CPU_INT08U i = 0; i < MAX_ASTEROIDS; i++){
+          rectangle_frame_buffer_display[i] = rectangle_frame_buffer_copy[i];
+        }
+     OSSemPost(&frame_buffer_sem, OS_OPT_POST_1, &os_err);
     
-    //oledc_rectangle(axis_data->x - sizeFactor, axis_data->y - sizeFactor, axis_data->x + sizeFactor, axis_data->y + sizeFactor, 0xffff);
-    //CPU_INT08U text[] = "score";
-    //oledc_text(text, 40,40);
+    
+    for(CPU_INT08U i = 0; i<MAX_ASTEROIDS ; i++){
+      if(old_rectangle_frame_buffer[i].x == -1) continue;
+      oledc_rectangle(old_rectangle_frame_buffer[i].x, old_rectangle_frame_buffer[i].y, old_rectangle_frame_buffer[i].x + old_rectangle_frame_buffer[i].width,
+      old_rectangle_frame_buffer[i].y + old_rectangle_frame_buffer[i].height, 0x0000);
+    }
+    for(CPU_INT08U i = 0; i<MAX_ASTEROIDS ; i++){
+      if(rectangle_frame_buffer_display[i].x == -1) continue;
+      oledc_rectangle(rectangle_frame_buffer_display[i].x, rectangle_frame_buffer_display[i].y, rectangle_frame_buffer_display[i].x + rectangle_frame_buffer_display[i].width,
+      rectangle_frame_buffer_display[i].y + rectangle_frame_buffer_display[i].height, 0xFFFF);
+    }
+        for(CPU_INT08U i = 0; i < MAX_ASTEROIDS; i++){
+          old_rectangle_frame_buffer[i] = rectangle_frame_buffer_display[i];
+        }
     
     if((os_err == OS_ERR_NONE) && (axis_data != NULL)){
         //oledc_rectangle(old_data.x, old_data.y, old_data.x + sizeFactor, old_data.y + sizeFactor, COLOR_BLACK);
@@ -559,6 +618,122 @@ static void App_Task_GAME_LOOP(void *p_arg){
             
         }
         
+        
+        OSSemPend(&gameState_sem,0,OS_OPT_PEND_BLOCKING,&ts,&os_err);
+        run_a_frame(&gameState);
+        OSSemPost(&gameState_sem, OS_OPT_POST_1, &os_err);
+        /* initiate scheduler */
+        OSTimeDlyHMSM(0, 0, 0, 50, OS_OPT_TIME_HMSM_STRICT, &os_err);
+    }
+}
+
+
+
+static void App_Task_RENDERER(void *p_arg){
+    /* declare and define task local variables */
+    OS_ERR os_err;
+    OS_MSG_SIZE size;
+    CPU_TS ts;
+
+    Asteroid asteroids [MAX_ASTEROIDS];
+    CPU_INT08U frame_buffer_counter = 0;
+    
+    /* prevent compiler warnings */
+    (void)p_arg;
+    
+    /* start of the endless loop */ 
+    while (DEF_TRUE) {
+        frame_buffer_counter = 0;
+        OSSemPend(&gameState_sem,0,OS_OPT_PEND_BLOCKING,&ts,&os_err);
+        for(CPU_INT08U i = 0; i< MAX_ASTEROIDS; i++){
+          asteroids[i] = gameState.asteroids[i];
+        }
+        OSSemPost(&gameState_sem, OS_OPT_POST_1, &os_err);
+        /*
+        CPU_INT08U frame_buffer_counter = 0;
+        for(CPU_INT08U i = 0; i< MAX_ASTEROIDS; i++){
+          for(CPU_INT08U j = 0; j< asteroids[i].size; j++){
+            if(asteroids[i].x+ j >0 && asteroids[i].x+ j <=96) continue;
+             for(CPU_INT08U k = 0; k< asteroids[i].size; k++){
+              if( asteroids[i].y + k > 0 && asteroids[i].y + k <= 96 ){
+                 frame_buffer[frame_buffer_counter].x = asteroids[i].x + j;
+                 frame_buffer[frame_buffer_counter].y = asteroids[i].y + k;
+                 frame_buffer_counter++;
+              }
+            }
+          }
+        }
+        */
+        for(CPU_INT08U i = 0; i< MAX_ASTEROIDS; i++){
+          if(!asteroids[i].is_active) continue;
+           CPU_INT08S x = asteroids[i].x;
+           CPU_INT08S y = asteroids[i].y;
+           CPU_INT08U size = asteroids[i].size;
+          CPU_INT08U max_width = size;
+          CPU_INT08U max_height = size;
+          
+           CPU_BOOLEAN found = false;
+          // get x
+          if(x < 0 ){
+            if(x + size <= 0){
+              x = -1;
+            }else{
+              // x is negative
+              max_width = size + x;
+              x = 0;
+            }
+          }else if (x > 95){
+            x = -1;
+          }
+          // get y
+          if(y < 0 ){
+            if(y + size <= 0){
+              y = -1;
+            }else{
+              // x is negative
+              max_height = size + y;
+              y = 0;
+            }
+          }else if (y > 95){
+            y = -1;
+          }
+          
+          if(x == -1 || y == -1){
+            // not found asteroid (not active probably)
+               rectangle_frame_buffer[frame_buffer_counter].x = -1;
+            continue;
+          }
+          
+         // if(asteroids[i].x + i < 0 || asteroids[i].x + i > 96 || asteroids[i].y + i < 0 || asteroids[i].y +i > 96) continue;
+          
+          // get width
+          CPU_INT08U width = 0;
+          for(CPU_INT08U j = 0; j< max_width; j++){
+            width = j;
+            if(!(x + j + 1 <= 96 && j+1 < max_width)) break;
+          }
+          // height
+          CPU_INT08U height = 0;
+          for(CPU_INT08U j = 0; j < max_height; j++){
+             height = j;
+             if(!(y + j + 1 <= 96 && j+1 < max_height)) break;
+          }
+          rectangle_frame_buffer[frame_buffer_counter].x = x;
+          rectangle_frame_buffer[frame_buffer_counter].y = y;
+          rectangle_frame_buffer[frame_buffer_counter].width = width;
+          rectangle_frame_buffer[frame_buffer_counter].height = height;
+          frame_buffer_counter++;
+        }
+        frame_buffer_counter = 0;
+       OSSemPend(&frame_buffer_sem,0,OS_OPT_PEND_BLOCKING,&ts,&os_err);
+            for(CPU_INT08U i = 0; i < MAX_ASTEROIDS; i++){
+          rectangle_frame_buffer_copy[i] = rectangle_frame_buffer[i];
+        }
+        OSSemPost(&frame_buffer_sem, OS_OPT_POST_1, &os_err);
+   
+        // shows the end of the array
+        //frame_buffer[frame_buffer_counter].x = -1;
+        //frame_buffer[frame_buffer_counter].y = -1;
         
         /* initiate scheduler */
         OSTimeDlyHMSM(0, 0, 0, 20, OS_OPT_TIME_HMSM_STRICT, &os_err);

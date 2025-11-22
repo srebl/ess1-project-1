@@ -39,7 +39,7 @@ CPU_VOID calculate_movement(GameState* game_state){
 
 CPU_VOID spawn_asteroids(GameState* game_state){
    for(int i = 0; i< MAX_ASTEROIDS; i++){
-    if(!game_state->asteroids[i].is_active) continue;
+    if(game_state->asteroids[i].is_active) continue;
     
     game_state->asteroids[i].size = (MIN_ASTEROID_SIZE) + rand() % (MAX_ASTEROID_SIZE - MIN_ASTEROID_SIZE + 1);
     // choose x axis First
@@ -68,12 +68,26 @@ CPU_VOID spawn_asteroids(GameState* game_state){
       }
     }
     
-    CPU_INT16U vX = game_state->player.x - game_state->asteroids[i].x;
-    CPU_INT16U vY = game_state->player.y - game_state->asteroids[i].y;
+    //CPU_INT16U vX = game_state->player.x - game_state->asteroids[i].x;
+    //CPU_INT16U vY = game_state->player.y - game_state->asteroids[i].y;
+    CPU_INT16U vX = 45 - game_state->asteroids[i].x;
+    CPU_INT16U vY = 45 - game_state->asteroids[i].y;
+    //CPU_INT16U length = sqrt((vX*vX + vY*vY));
+   // game_state->asteroids[i].vX = vX/length;
+   // game_state->asteroids[i].vY = vY/length;
+    game_state->asteroids[0].size = 10;
+    game_state->asteroids[0].x = -11;
+     game_state->asteroids[0].y = 50;
+    game_state->asteroids[0].vX = 1;
+    game_state->asteroids[0].vY = 0;
+    game_state->asteroids[0].is_active = DEF_TRUE;
     
-    CPU_INT16U length = sqrt((vX*vX + vY*vY));
-    game_state->asteroids[i].vX = vX/length;
-    game_state->asteroids[i].vY = vY/length;
+      game_state->asteroids[1].size = 10;
+    game_state->asteroids[1].x = 105;
+     game_state->asteroids[1].y = 13;
+    game_state->asteroids[1].vX = -2;
+    game_state->asteroids[1].vY = 1;
+    game_state->asteroids[1].is_active = DEF_TRUE;
     
   }
 }
@@ -91,6 +105,12 @@ CPU_VOID destroy_asteroids(GameState* game_state){
         game_state->asteroids[i].is_active = DEF_FALSE;
       }
   }
+}
+
+CPU_VOID run_a_frame(GameState* game_state){
+  calculate_movement(game_state);
+  spawn_asteroids(game_state);
+  destroy_asteroids(game_state);
 }
 
 
