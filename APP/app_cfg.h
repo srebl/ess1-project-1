@@ -48,7 +48,7 @@
 
 #define  APP_CFG_TASK_START_PRIO                        2u
 #define  APP_CFG_TASK_COM_PRIO                          3u
-#define  APP_CFG_TASK_SENDER_PRIO                       4u
+#define  APP_CFG_TASK_SENDER_PRIO                       3u
 #define  APP_CFG_TASK_RECEIVER_PRIO                     3u
 #define APP_CFG_TASK_GAME_LOOP_PRIO                     4u
 #define APP_CFG_TASK_RENDERER_PRIO                      3u

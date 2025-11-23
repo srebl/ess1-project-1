@@ -15,7 +15,7 @@
 #define GAME_AREA_HEIGHT 95
 #define GAME_AREA_WIDTH 95
   
-#define MAX_ASTEROIDS 5
+#define MAX_ASTEROIDS 3
 #define MIN_ASTEROID_SIZE 3
 #define MAX_ASTEROID_SIZE 20
   
@@ -25,7 +25,7 @@
 
 typedef struct{
   CPU_INT08U size;
-  CPU_INT08S x,y,vX,vY;
+  CPU_FP32 x,y,vX,vY;
   CPU_BOOLEAN is_active;
 }Asteroid;
 
@@ -36,7 +36,7 @@ typedef enum {
 
 typedef struct {
   CPU_INT08U size;
-  CPU_INT08S x,y,vX,vY;
+  CPU_FP32 x,y,vX,vY;
   CPU_INT16U score;
   PlayerState player_state;
   CPU_INT08U* sprite;

@@ -22,6 +22,7 @@ typedef struct {
   CPU_INT08U height;
 }Rectangle;
 
+
 void delete_slivers(Rectangle oldRect, Rectangle newRect);
 
 /* [] END OF FILE */

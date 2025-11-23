@@ -37,6 +37,17 @@
 #define  MESSAGE_QUEUE_SIZE                         sizeof(c6dofimu14_axis_t) * 30
 #define  MESSAGE_SIZE                               sizeof(c6dofimu14_axis_t)
 
+#define INPUT_TASK_DELAY 10
+#define GAME_LOOP_TASK_DELAY 50
+#define RENDERER_TASK_DELAY 50
+#define DISPLAY_TASK_DELAY 50
+
+#define CENTER_POINT        45.0f
+#define DEAD_ZONE_WIDTH     10.0f // +/- 5.0f around 50.0f
+#define MAX_ACCEL_VALUE     100.0f
+#define MAX_PLAYER_SPEED_F  6.0f  // Float maximum speed
+
+
 /*
 *********************************************************************************************************
 *                                            LOCAL VARIABLES
@@ -66,14 +77,15 @@ OS_SEM gameState_sem;
 OS_SEM frame_buffer_sem;
 static GameState gameState;
 
-static Rectangle rectangle_frame_buffer [MAX_ASTEROIDS];
-
-static Rectangle rectangle_frame_buffer_copy [MAX_ASTEROIDS];
-static Rectangle rectangle_frame_buffer_display [MAX_ASTEROIDS];
-static Rectangle old_rectangle_frame_buffer [MAX_ASTEROIDS];
+//static Rectangle rectangle_frame_buffer_copy [MAX_ASTEROIDS];
 
 
+typedef struct{
+  Rectangle rectangles[MAX_ASTEROIDS];
+  CPU_INT08U player_x,player_y;
+}FrameBuffer;
 
+static FrameBuffer frame_buffer_copy;
 /*
 *********************************************************************************************************
 *                                         FUNCTION PROTOTYPES
@@ -415,50 +427,79 @@ static  void  App_TaskCOM (void *p_arg)
 *********************************************************************************************************
 */
 
-static  void  App_TaskSENDER (void *p_arg)
+static void App_TaskSENDER (void *p_arg)
 {
-  /* declare and define task local variables */
     OS_ERR       os_err;
-    CPU_TS         ts;
+    CPU_TS       ts;
     c6dofimu14_axis_t axis_data = {0, 0, 0};
   
-  /* prevent compiler warnings */
     (void)p_arg;
-    CPU_INT08S vX =0;
-    CPU_INT08S vY = 0;
-    CPU_INT08U buffer[20];
     
-    oledc_set_font(guiFont_Tahoma_7_Regular,0xffff,_OLEDC_FO_HORIZONTAL);
+    // *** CRITICAL CHANGE: Use Floats for velocity ***
+    CPU_FP32 vX = 0.0f;
+    CPU_FP32 vY = 0.0f;
     
-    OSTimeDlyHMSM(0, 0, 0, 100, OS_OPT_TIME_HMSM_STRICT, &os_err);
+    // ... (setup) ...
     
-  /* start of the endless loop */
-  while (DEF_TRUE) {
-    // axis data is generally between 0 100, but there is also a position where the sensors get the max
-    c6dofimu14_read_accel_axis(&axis_data);
-    
-    gameState.mode = GAME_MODE_RUNNING;
-    
-    if(axis_data.x > 100){
-      vX = MAX_PLAYER_SPEED;
-    }else{
-      vX = (((axis_data.x / 10)-4) * 2);
+    while (DEF_TRUE) {
+        c6dofimu14_read_accel_axis(&axis_data);
+        gameState.mode = GAME_MODE_RUNNING;
+        
+        // --- X-AXIS (Horizontal) ---
+        // Cast input to float for consistent calculation
+        CPU_FP32 inputX = (CPU_FP32)axis_data.x;
+        
+        if ((inputX >= (CENTER_POINT - DEAD_ZONE_WIDTH/2.0f)) && 
+            (inputX <= (CENTER_POINT + DEAD_ZONE_WIDTH/2.0f))) {
+            
+            // 1. Dead Zone
+            vX = 0.0f;
+
+        } else if (inputX < CENTER_POINT) { 
+            
+            // 2. Tilt Left
+            // Calculate ratio based on distance from the dead zone edge
+            vX = ( (inputX - (CENTER_POINT - DEAD_ZONE_WIDTH/2.0f)) / (CENTER_POINT - DEAD_ZONE_WIDTH/2.0f) ) * MAX_PLAYER_SPEED_F;
+            
+            // Clamp (no need to cast since vX is already float)
+            if (vX < -MAX_PLAYER_SPEED_F) {
+                vX = -MAX_PLAYER_SPEED_F;
+            }
+
+        } else { // inputX > CENTER_POINT
+            
+            // 3. Tilt Right
+            // Calculate ratio based on distance from the dead zone edge
+            vX = ( (inputX - (CENTER_POINT + DEAD_ZONE_WIDTH/2.0f)) / (MAX_ACCEL_VALUE - (CENTER_POINT + DEAD_ZONE_WIDTH/2.0f)) ) * MAX_PLAYER_SPEED_F;
+
+            // Clamp
+            if (vX > MAX_PLAYER_SPEED_F) {
+                vX = MAX_PLAYER_SPEED_F;
+            }
+        }
+
+        // --- Y-AXIS (Vertical) ---
+        CPU_FP32 inputY = (CPU_FP32)axis_data.y;
+        
+        if ((inputY >= (CENTER_POINT - DEAD_ZONE_WIDTH/2.0f)) && 
+            (inputY <= (CENTER_POINT + DEAD_ZONE_WIDTH/2.0f))) {
+            vY = 0.0f;
+        } else if (inputY < CENTER_POINT) {
+            vY = ( (inputY - (CENTER_POINT - DEAD_ZONE_WIDTH/2.0f)) / (CENTER_POINT - DEAD_ZONE_WIDTH/2.0f) ) * MAX_PLAYER_SPEED_F;
+            if (vY < -MAX_PLAYER_SPEED_F) { vY = -MAX_PLAYER_SPEED_F; }
+        } else { 
+            vY = ( (inputY - (CENTER_POINT + DEAD_ZONE_WIDTH/2.0f)) / (MAX_ACCEL_VALUE - (CENTER_POINT + DEAD_ZONE_WIDTH/2.0f)) ) * MAX_PLAYER_SPEED_F;
+            if (vY > MAX_PLAYER_SPEED_F) { vY = MAX_PLAYER_SPEED_F; }
+        }
+
+        // --- Update Game State ---
+        OSSemPend(&gameState_sem,0,OS_OPT_PEND_BLOCKING,&ts,&os_err);
+        gameState.player.vX = vX; // Assigning Float to Float (Safe)
+        gameState.player.vY = vY; // Assigning Float to Float (Safe)
+        OSSemPost(&gameState_sem,OS_OPT_POST_1,&os_err);
+        
+        OSTimeDlyHMSM(0, 0, 0, INPUT_TASK_DELAY, OS_OPT_TIME_HMSM_STRICT, &os_err);
     }
-    if(axis_data.y > 100){
-      vY = MAX_PLAYER_SPEED;
-    }else{
-      vY = (((axis_data.y / 10)-4) * 2);
-    }
-    OSSemPend(&gameState_sem,0,OS_OPT_PEND_BLOCKING,&ts,&os_err);
-    gameState.player.vX = vX;
-    gameState.player.vY = vY;
-    OSSemPost(&gameState_sem,OS_OPT_POST_1,&os_err);
-    
-    /* initiate scheduler */
-    OSTimeDlyHMSM(0, 0, 0, 10, 
-                  OS_OPT_TIME_HMSM_STRICT, 
-                  &os_err);
-  }
 }
 
 /*
@@ -494,10 +535,12 @@ static  void  App_TaskRECEIVER (void *p_arg)
     CPU_INT08U z_axis = 0;
     CPU_INT08U range = 3;
     oledc_set_font(guiFont_Tahoma_7_Regular,COLOR_WHITE,_OLEDC_FO_HORIZONTAL);
+    Rectangle old_rectangle_frame_buffer [MAX_ASTEROIDS];
+    Rectangle rectangle_frame_buffer_display [MAX_ASTEROIDS];
+    
     for(CPU_INT08U i = 0; i<MAX_ASTEROIDS ; i++){
         old_rectangle_frame_buffer[i].x = -1;
-        rectangle_frame_buffer_copy[i].x = -1;
-        rectangle_frame_buffer[i].x = -1;
+        frame_buffer_copy.rectangles[i].x = -1;
     }    
     
     oledc_fill_screen(COLOR_BLACK);
@@ -522,7 +565,7 @@ static  void  App_TaskRECEIVER (void *p_arg)
     
     OSSemPend(&frame_buffer_sem,0,OS_OPT_PEND_BLOCKING,&ts,&os_err);
     for(CPU_INT08U i = 0; i < MAX_ASTEROIDS; i++){
-        rectangle_frame_buffer_display[i] = rectangle_frame_buffer_copy[i];
+        rectangle_frame_buffer_display[i] = frame_buffer_copy.rectangles[i];
     }
     
     OSSemPost(&frame_buffer_sem, OS_OPT_POST_1, &os_err);
@@ -556,7 +599,7 @@ static  void  App_TaskRECEIVER (void *p_arg)
     OSSemPost(&gameState_sem, OS_OPT_POST_1, &os_err);
     
     /* initiate scheduler */
-    OSTimeDlyHMSM(0, 0, 0, 50, 
+    OSTimeDlyHMSM(0, 0, 0, DISPLAY_TASK_DELAY, 
                   OS_OPT_TIME_HMSM_STRICT, 
                   &os_err);
   }
@@ -599,33 +642,31 @@ static void App_Task_GAME_LOOP(void *p_arg){
     
     /* start of the endless loop */ 
     while (DEF_TRUE) {
-        //asteroids_DrawBorder(COLOR_GREEN);
         CPU_INT32U now = OSTimeGet(&os_err);
         
         
         if(gameState.mode == GAME_MODE_RUNNING){
             elapsed_ms += LOOP_DELAY_MS;
 
-            if (elapsed_ms >= SCORE_PERIOD_MS) {
-                elapsed_ms -= SCORE_PERIOD_MS;   // keep remainder for accuracy
-                gameState.player.score++;
-            }
+           
             
             
             
             
         } else if(gameState.mode == GAME_MODE_GAME_OVER){
             
-            //other shit
-            
         }
         
         
         OSSemPend(&gameState_sem,0,OS_OPT_PEND_BLOCKING,&ts,&os_err);
         run_a_frame(&gameState);
+         if (elapsed_ms >= SCORE_PERIOD_MS) {
+                elapsed_ms -= SCORE_PERIOD_MS;   // keep remainder for accuracy
+                gameState.player.score++;
+            }
         OSSemPost(&gameState_sem, OS_OPT_POST_1, &os_err);
         /* initiate scheduler */
-        OSTimeDlyHMSM(0, 0, 0, 50, OS_OPT_TIME_HMSM_STRICT, &os_err);
+        OSTimeDlyHMSM(0, 0, 0, GAME_LOOP_TASK_DELAY, OS_OPT_TIME_HMSM_STRICT, &os_err);
     }
 }
 
@@ -638,14 +679,13 @@ static void App_Task_RENDERER(void *p_arg){
     CPU_TS ts;
 
     Asteroid asteroids [MAX_ASTEROIDS];
-    CPU_INT08U frame_buffer_counter = 0;
-    
+   
+    Rectangle rectangle_frame_buffer [MAX_ASTEROIDS];
     /* prevent compiler warnings */
     (void)p_arg;
     
     /* start of the endless loop */ 
     while (DEF_TRUE) {
-        frame_buffer_counter = 0;
         OSSemPend(&gameState_sem,0,OS_OPT_PEND_BLOCKING,&ts,&os_err);
         for(CPU_INT08U i = 0; i< MAX_ASTEROIDS; i++){
           asteroids[i] = gameState.asteroids[i];
@@ -659,20 +699,20 @@ static void App_Task_RENDERER(void *p_arg){
             
             if(!asteroids[i].is_active) continue;
 
-            CPU_INT08S x_start = asteroids[i].x;
-            CPU_INT08S y_start = asteroids[i].y;
+            CPU_FP32 x_start = asteroids[i].x;
+            CPU_FP32 y_start = asteroids[i].y;
             CPU_INT08U size = asteroids[i].size;
             
             // Calculate clipping: The coordinates that are actually on the screen (0 to 95)
             
-            CPU_INT08S x_visible_min = (x_start < 0) ? 0 : x_start;
-            CPU_INT08S y_visible_min = (y_start < 0) ? 0 : y_start;
+            CPU_FP32 x_visible_min = (x_start < 0) ? 0 : x_start;
+            CPU_FP32 y_visible_min = (y_start < 0) ? 0 : y_start;
             
-            CPU_INT08S x_end = x_start + size;
-            CPU_INT08S y_end = y_start + size;
+            CPU_FP32 x_end = x_start + (CPU_FP32)size;
+            CPU_FP32 y_end = y_start + (CPU_FP32)size;
             
-            CPU_INT08S x_visible_max = (x_end > 96) ? 96 : x_end;
-            CPU_INT08S y_visible_max = (y_end > 96) ? 96 : y_end;
+            CPU_FP32 x_visible_max = (x_end > 96) ? 96 : x_end;
+            CPU_FP32 y_visible_max = (y_end > 96) ? 96 : y_end;
             
             // Check if asteroid is entirely off-screen (should be caught by destroy_asteroids, 
             // but this is a fail-safe for rendering):
@@ -682,11 +722,11 @@ static void App_Task_RENDERER(void *p_arg){
             }
             
             // Populate the frame buffer for the visible portion
-            rectangle_frame_buffer[i].x = x_visible_min;
-            rectangle_frame_buffer[i].y = y_visible_min;
+            rectangle_frame_buffer[i].x = (CPU_INT08S)round(x_visible_min);
+            rectangle_frame_buffer[i].y = (CPU_INT08S)round(y_visible_min);
             // Width/Height = max_coord - min_coord
-            rectangle_frame_buffer[i].width = x_visible_max - x_visible_min;
-            rectangle_frame_buffer[i].height = y_visible_max - y_visible_min;
+            rectangle_frame_buffer[i].width =(CPU_INT08S)round(x_visible_max - x_visible_min);
+            rectangle_frame_buffer[i].height = (CPU_INT08S)round(y_visible_max - y_visible_min);
         }
 
         // --- 3. Update Render Buffer (Write Lock) ---
@@ -695,12 +735,12 @@ static void App_Task_RENDERER(void *p_arg){
         // CRITICAL FIX: Copy the *entire* array to ensure inactive/deleted asteroids 
         // are correctly marked as x = -1 in the copy buffer.
         for(CPU_INT08U i = 0; i < MAX_ASTEROIDS; i++){
-            rectangle_frame_buffer_copy[i] = rectangle_frame_buffer[i];
+            frame_buffer_copy.rectangles[i] = rectangle_frame_buffer[i];
         }
         
         OSSemPost(&frame_buffer_sem, OS_OPT_POST_1, &os_err);
         /* initiate scheduler */
-        OSTimeDlyHMSM(0, 0, 0, 50, OS_OPT_TIME_HMSM_STRICT, &os_err);
+        OSTimeDlyHMSM(0, 0, 0, RENDERER_TASK_DELAY, OS_OPT_TIME_HMSM_STRICT, &os_err);
     }
 }
 
