@@ -7,11 +7,34 @@
  * CONFIDENTIAL AND PROPRIETARY INFORMATION
  * WHICH IS THE PROPERTY OF your company.
  *
+ * Authors: Lukas Buchmayer, Gavrilo Stanic, Zobay Rahimi, Sebastian Rath
+ * 
  * ========================================
 */
 
+/*
+*********************************************************************************************************
+*                                             INCLUDE FILES
+*********************************************************************************************************
+*/ 
 #include <render_utils.h>
 
+
+/*
+*********************************************************************************************************
+*                                             FUNCTIONS
+*********************************************************************************************************
+*/
+
+/**
+ * @brief Delete slivers
+ *
+ * @param[in] oldRect           Struct of asteroid of previous frame
+ * @param[in] newRect           Struct of asteroid of current frame
+ *
+ * Draws an asteroid and dirty-frames the asteroids trail by overdrawing it with data from previous
+ * position.
+ */
 void delete_slivers(Rectangle oldRect, Rectangle newRect){
     if (oldRect.x == -1) return;
     
