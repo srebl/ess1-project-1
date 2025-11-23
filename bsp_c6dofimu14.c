@@ -116,8 +116,8 @@ void c6dofimu14_read_accel_axis(c6dofimu14_axis_t *axis){
     axis->x <<= 8;
     i2c_master_read( C6DOFIMU14_ADDRESS, C6DOFIMU14_REG0_ACCEL_X_LSB, &tmp_data, 1 );
     axis->x |= tmp_data;
-    axis->x = map(axis->x, C6DOFIMU14_ACCEL_MIN, C6DOFIMU14_ACCEL_MAX, OLED_X_MIN, OLED_X_MAX);
-
+    axis->x = map(axis->x, C6DOFIMU14_ACCEL_MIN, C6DOFIMU14_ACCEL_MAX, OLED_X_MAX, OLED_X_MIN);
+    
     i2c_master_read( C6DOFIMU14_ADDRESS, C6DOFIMU14_REG0_ACCEL_Y_MSB, &tmp_data, 1 );
     axis->y = tmp_data;
     axis->y <<= 8;
