@@ -48,7 +48,8 @@
 #define MAX_PLAYER_SPEED_F                          6.0f  // Float maximum speed
 
 #define FORWARD_THRESHOLD_Y                         40 //game restart
-
+#define SCORE_PERIOD_MS                             100
+#define LOOP_DELAY_MS                               10
 
 /*
 *********************************************************************************************************
@@ -65,8 +66,8 @@ static  CPU_STK  App_TaskCOMStk[APP_CFG_TASK_COM_STK_SIZE];
 static  OS_TCB   App_TaskSENDER_TCB;
 static  CPU_STK  App_TaskSENDERStk[APP_CFG_TASK_SENDER_STK_SIZE];
 
-static  OS_TCB   App_TaskRECEIVER_TCB;
-static  CPU_STK  App_TaskRECEIVERStk[APP_CFG_TASK_RECEIVER_STK_SIZE];
+static  OS_TCB   App_TaskDISPLAY_TCB;
+static  CPU_STK  App_TaskDISPLAYStk[APP_CFG_TASK_DISPLAY_STK_SIZE];
 
 static OS_TCB  App_Task_GAME_LOOP_TCB;
 static CPU_STK App_Task_GAME_LOOP_Stk[APP_CFG_TASK_GAME_LOOP_STK_SIZE];
@@ -101,7 +102,7 @@ static  void  App_TaskCreate (void);
 static  void  App_ObjCreate  (void);
 
 static void App_TaskSENDER (void *p_arg);
-static void App_TaskRECEIVER (void *p_arg);
+static void App_TaskDISPLAY (void *p_arg);
 static void App_Task_GAME_LOOP (void *p_arg);
 static void App_Task_RENDERER (void *p_arg);
 
@@ -263,14 +264,14 @@ static  void  App_TaskCreate (void)
                (OS_OPT       )(OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
                (OS_ERR      *)&os_err);
 /* create RECEIVER task */
-  OSTaskCreate((OS_TCB      *)&App_TaskRECEIVER_TCB,
-               (CPU_CHAR    *)"TaskRECEIVER",
-               (OS_TASK_PTR  )App_TaskRECEIVER, 
+  OSTaskCreate((OS_TCB      *)&App_TaskDISPLAY_TCB,
+               (CPU_CHAR    *)"TaskDISPLAY",
+               (OS_TASK_PTR  )App_TaskDISPLAY, 
                (void        *)0,
-               (OS_PRIO      )APP_CFG_TASK_RECEIVER_PRIO,
-               (CPU_STK     *)&App_TaskRECEIVERStk[0],
-               (CPU_STK_SIZE )APP_CFG_TASK_RECEIVER_STK_SIZE_LIMIT,
-               (CPU_STK_SIZE )APP_CFG_TASK_RECEIVER_STK_SIZE,
+               (OS_PRIO      )APP_CFG_TASK_DISPLAY_PRIO,
+               (CPU_STK     *)&App_TaskDISPLAYStk[0],
+               (CPU_STK_SIZE )APP_CFG_TASK_DISPLAY_STK_SIZE_LIMIT,
+               (CPU_STK_SIZE )APP_CFG_TASK_DISPLAY_STK_SIZE,
                (OS_MSG_QTY   )0u,
                (OS_TICK      )0u,
                (void        *)0,
@@ -491,8 +492,6 @@ static void App_TaskSENDER (void *p_arg)
             gameState.player.vY = vY; //Assigning Float to Float (Safe)
             OSSemPost(&gameState_sem,OS_OPT_POST_1,&os_err);
         } else if(gameState.mode == GAME_MODE_GAME_OVER){
-            //gameState.player.vX = 0.0f;
-            //gameState.player.vY = 0.0f;
             if(axis_data.y < FORWARD_THRESHOLD_Y){
                 OSSemPost(&gyro_sem, OS_OPT_POST_1, &os_err);
             }
@@ -518,22 +517,15 @@ static void App_TaskSENDER (void *p_arg)
 * Note(s)     : none
 *********************************************************************************************************
 */
-static  void  App_TaskRECEIVER (void *p_arg)
+static  void  App_TaskDISPLAY (void *p_arg)
 {
   /* declare and define task local variables */
   OS_ERR       os_err;
   
     OS_MSG_SIZE size;
     CPU_TS ts;
-
-    c6dofimu14_axis_t *axis_data; //create c6dofimu14 data struct object
-    c6dofimu14_axis_t old_data = {46, 46, 0}; //middle, no z
     
     CPU_INT08U prev_player[2] = {0, 0}; //initialize player position
-    
-    CPU_INT08U sizeFactor = 2;
-    CPU_INT08U z_axis = 0;
-    CPU_INT08U range = 3;
     
     //set oledc font, initialize asteroids
     oledc_set_font(guiFont_Tahoma_7_Regular,COLOR_WHITE,_OLEDC_FO_HORIZONTAL);
@@ -619,20 +611,15 @@ static void App_Task_GAME_LOOP(void *p_arg){
     OS_ERR os_err;
     OS_MSG_SIZE size;
     CPU_TS ts;
-    gameState.player.x = 45;
-    gameState.player.y = 45;
-    gameState.player.size = 7;
+    game_state_init(&gameState);
     /* prevent compiler warnings */
     (void)p_arg;
     
     CPU_INT32U lastScoreTick = OSTimeGet(&os_err);
     
-    const CPU_INT16U SCORE_PERIOD_MS = 100;
-    const CPU_INT16U LOOP_DELAY_MS = 10;
+   
 
     CPU_INT32U elapsed_ms = 0;
-    
-    CPU_INT08U sizeFactor = 3;
     
     /* start of the endless loop */ 
     while (DEF_TRUE) {
@@ -649,27 +636,13 @@ static void App_Task_GAME_LOOP(void *p_arg){
                 gameState.player.score++;
             }
             
-            OSSemPost(&gameState_sem, OS_OPT_POST_1, &os_err);
         } else if(gameState.mode == GAME_MODE_GAME_OVER){
             //pend on movement
-            OSTimeDlyHMSM(0, 0, 2, 0, OS_OPT_TIME_HMSM_STRICT, &os_err);
-            OSSemPend(&gyro_sem, 0, OS_OPT_PEND_BLOCKING, &ts, &os_err);
-            
-            gameState.player.x = 45; // Reset player position
-            gameState.player.y = 45; // Reset player position
-            gameState.player.vX = 0.0f; // Stop all movement
-            gameState.player.vY = 0.0f;
-            
-            gameState.player.score = 0;
-            gameState.mode = GAME_MODE_RUNNING;
-            elapsed_ms = 0;
-            
-            reset_asteroids(&gameState);
+           // OSTimeDlyHMSM(0, 0, 2, 0, OS_OPT_TIME_HMSM_STRICT, &os_err);
+            reset_game_state(&gameState);
             oledc_fill_screen(COLOR_BLACK);
-            
-            
-            OSSemPost(&gameState_sem, OS_OPT_POST_1, &os_err);
         }
+        OSSemPost(&gameState_sem, OS_OPT_POST_1, &os_err);
         
         /* initiate scheduler */
         OSTimeDlyHMSM(0, 0, 0, GAME_LOOP_TASK_DELAY, OS_OPT_TIME_HMSM_STRICT, &os_err);

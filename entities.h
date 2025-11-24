@@ -35,7 +35,9 @@
 #define MIN_ASTEROID_SIZE 3
 #define MAX_ASTEROID_SIZE 20
   
-#define MAX_PLAYER_SPEED 8
+#define MAX_PLAYER_SPEED 8.0f
+#define STOPPED_SPEED    0.0f
+#define PLAYER_SIZE      7
 
 /*
 *********************************************************************************************************

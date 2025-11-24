@@ -213,4 +213,47 @@ CPU_VOID reset_asteroids(GameState* game_state){
     }
 }
 
+/**
+ * @brief Game state reset
+ *
+ * @param[in] game_state           current state of game
+ *
+ * Resets all objects
+ */
+CPU_VOID reset_game_state(GameState* game_state){
+  game_state->player.x = GAME_AREA_HEIGHT / 2.0f; // Reset player position
+  game_state->player.y = GAME_AREA_HEIGHT / 2.0f; // Reset player position
+  game_state->player.vX = STOPPED_SPEED; // Stop all movement
+  game_state->player.vY = STOPPED_SPEED;
+  
+  game_state->player.score = 0;
+  
+   for(CPU_INT08U i = 0; i < MAX_ASTEROIDS; i++){
+        game_state->asteroids[i].is_active = DEF_FALSE;
+    };
+}
+
+/**
+ * @brief Game state init
+ *
+ * @param[in] game_state           current state of game
+ *
+ * Initializes the game state
+ */
+CPU_VOID game_state_init(GameState* game_state){
+  game_state->player.x = GAME_AREA_HEIGHT / 2.0f; // Reset player position
+  game_state->player.y = GAME_AREA_HEIGHT / 2.0f; // Reset player position
+  game_state->player.vX = STOPPED_SPEED; // Stop all movement
+  game_state->player.vY = STOPPED_SPEED;
+  game_state->player.size = PLAYER_SIZE;
+  game_state->player.score = 0;
+  game_state->mode = GAME_MODE_MENU;
+  
+  game_state->player.score = 0;
+  
+   for(CPU_INT08U i = 0; i < MAX_ASTEROIDS; i++){
+        game_state->asteroids[i].is_active = DEF_FALSE;
+    };
+}
+
 /* [] END OF FILE */

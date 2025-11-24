@@ -83,4 +83,20 @@ CPU_VOID run_a_frame(GameState* game_state);
  * Resets all objects
  */
 CPU_VOID reset_asteroids(GameState* game_state);
+/**
+ * @brief Game state reset
+ *
+ * @param[in] game_state           current state of game
+ *
+ * Resets all objects
+ */
+CPU_VOID reset_game_state(GameState* game_state);
+/**
+ * @brief Game state init
+ *
+ * @param[in] game_state           current state of game
+ *
+ * Initializes the game state
+ */
+CPU_VOID game_state_init(GameState* game_state);
 /* [] END OF FILE */
