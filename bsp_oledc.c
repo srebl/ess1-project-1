@@ -14,7 +14,7 @@
  *
  * ALTERED FOR PSoC 5LP CY8C5888LT*-LP097
  *
- * Authors: Lukas Buchmayer
+ * Authors: Lukas Buchmayer, Gavrilo Stanic, Zobay Rahimi, Sebastian Rath
  * 
  * ========================================
 */
@@ -31,7 +31,7 @@
     
 
 OS_ERR os_err;
-
+    
 /*
 *********************************************************************************************************
 *                                             FONT ORIENTATIONS
@@ -149,7 +149,6 @@ static CPU_INT16U         y_cord;
  *
  * Draws a pixel at a specified coordination with a specfied color
  */
-
  void pixel(CPU_INT08U col, CPU_INT08U row, CPU_INT16U color){
     CPU_INT08U cmd = _OLEDC_WRITE_RAM;
     CPU_INT08U clr[2] = {0};
@@ -590,16 +589,183 @@ void oledc_line(CPU_INT08U x1, CPU_INT08U y1, CPU_INT08U x2, CPU_INT08U y2, CPU_
 }
 
 /**
- * @brief OLED C hud
+ * @brief OLED C line any
  *
- * Draws the main hud "background"
+ * @param[in] x1         start x coordinate
+ * @param[in] y1         start y coordinate
+ * @param[in] x2         end x coordinate
+ * @param[in] y2         end y coordinate
+ * @param[in] color      string
+ *
+ * Draws a 1 pixel thick line from x1y1 to x2y2 at any angle
  */
-void oledc_hud(){
-    oledc_line(48, 0, 48, 95,0x07e0);
-    oledc_line(0, 48, 95, 48,0x07e0);
+void oledc_line_any(CPU_INT08U x1, CPU_INT08U y1, CPU_INT08U x2, CPU_INT08U y2, CPU_INT16U color){
+    if(x1 != x2 && y1 != y2){
+        CPU_INT08S d_x = x2 - x1;
+        CPU_INT08S d_y = y2 - y1;
+        
+        CPU_INT16S steps = (abs(d_x) > abs(d_y)) ? abs(d_x) : abs(d_y);
+        
+        CPU_FP32 x_inc = (CPU_FP32)d_x / steps;
+        CPU_FP32 y_inc = (CPU_FP32)d_y / steps;
+        
+        CPU_FP32 x = x1;
+        CPU_FP32 y = y1;
+        
+        for(CPU_INT08U i = 0; i <= steps; i++){
+            pixel((CPU_INT08U)round(x), (CPU_INT08U)round(y), color);
+            x += x_inc;
+            y += y_inc;
+        }
+    }
 }
 
+/**
+ * @brief Asteroids draw border
+ *
+ * @param[in] color         desired color
+ *
+ * Draw 1pixel wide border around entire screen in COLOR_GREEN
+ */
+void asteroids_DrawBorder(CPU_INT16U color){
+    oledc_line(0, 0, 0, 95, color);
+    oledc_line(0, 0, 95, 0, color);
+    oledc_line(0, 95, 95, 95, color);
+    oledc_line(95, 0, 95, 95, color);
+}
 
+/**
+ * @brief Asteroids game welcome screen
+ *
+ * First screen you see when "booting up" the game, only shows during first boot
+ */
+void asteroids_DrawPreGame(){
+    oledc_set_font(guiFont_Tahoma_7_Regular,COLOR_GREEN,_OLEDC_FO_HORIZONTAL);
+    //oledc_fill_screen(COLOR_BLACK);
+    asteroids_DrawBorder(COLOR_GREEN);
+    
+    oledc_line(20, 15, 75, 15, COLOR_GREEN);
+    CPU_INT08U title[] = "ASTEROIDS";
+    oledc_text(title, 20, 25);
+    
+    oledc_line(10, 45, 85, 45, COLOR_GREEN);
+    oledc_line(15, 55, 80, 55, COLOR_GREEN);
+    
+    oledc_line_any(20, 15, 10, 45, COLOR_GREEN);
+    oledc_line_any(75, 15, 85, 45, COLOR_GREEN);
+    
+    oledc_line_any(10, 45, 15, 55, COLOR_GREEN);
+    oledc_line_any(80, 55, 85, 45, COLOR_GREEN);
+    
+    
+    CPU_INT08U subtitle[] = "Starting soon...";
+    oledc_text(subtitle, 15, 65);
+}
+
+/**
+ * @brief Asteroids arena
+ *
+ * @param[in] state             GameState struct, current game state
+ *
+ * Draws the main component of the game arena/area without objects
+ */
+void asteroids_DrawArena(GameState *state){
+    oledc_set_font(guiFont_Tahoma_7_Regular,COLOR_WHITE,_OLEDC_FO_HORIZONTAL);
+
+    CPU_CHAR cur_score[5]; // Should be large enough for max possible score
+    itoa(state->player.score, cur_score, 10);
+
+    size_t score_len = strlen(cur_score);
+
+    const CPU_INT08U CHAR_WIDTH = 7;
+
+    CPU_INT08U rect_width = (score_len * CHAR_WIDTH) + 2; 
+
+    const CPU_INT08U RECT_X_START = 2; //Start X position for the background
+    const CPU_INT08U RECT_Y_START = 1; //Start Y position for the background
+    const CPU_INT08U RECT_HEIGHT = 10; //Height to cover the text
+
+    oledc_rectangle(RECT_X_START, RECT_Y_START, RECT_X_START + rect_width, RECT_Y_START + RECT_HEIGHT, COLOR_BLACK);
+
+    oledc_text((CPU_INT08U*)cur_score, RECT_X_START + 1, RECT_Y_START + 1);
+    
+}
+
+/**
+ * @brief Asteroids game over
+ *
+ * @param[in] state             GameState struct, current game state
+ *
+ * If game collision ooccured, this screen gets posted
+ * Game over screen for game, and asks for button click to restart game
+ */
+void asteroids_DrawGameOver(GameState *state){
+    oledc_set_font(guiFont_Tahoma_7_Regular,COLOR_RED,_OLEDC_FO_HORIZONTAL);
+    asteroids_DrawBorder(COLOR_RED);
+    //oledc_fill_screen(COLOR_BLACK);
+    oledc_line(30, 25, 65, 25, COLOR_RED);
+    
+    CPU_INT08U title1[] = "GAME";
+    oledc_text(title1, 35, 30);
+    CPU_INT08U title2[] = "OVER";
+    oledc_text(title2, 35, 40);
+    
+    oledc_line(30, 55, 65, 55, COLOR_RED);
+    
+    CPU_INT08U score_title[] = "Score: ";
+    oledc_text(score_title, 20, 60);
+    CPU_CHAR final_score[6];
+    itoa(state->player.score, final_score, 10);
+    oledc_text((CPU_INT08U*)final_score, 50, 60);
+    
+    CPU_INT08U subtitle[] = "Flip to Restart";
+    oledc_text(subtitle, 18, 75);
+}
+
+/**
+ * @brief Draw triangle with coordinate as middle point
+ *
+ * @param[in] x         center x coordinate
+ * @param[in] y         center y coordinate
+ * @param[in] color     string
+ *
+ * Draws an equilateral triangle with the given coordinates as its cetner
+ */
+void oledc_triangle(CPU_INT08U x, CPU_INT08U y, CPU_INT16U color){
+    const CPU_INT08U widths[] = {1, 1, 3, 3, 5, 5, 7};
+    const CPU_INT08U offsets[] = {0, 0, 1, 1, 2, 2, 3}; 
+    
+    CPU_INT08U current_y = y - 3; 
+    
+    for (int i = 0; i < 7; i++) {
+        CPU_INT08U w = widths[i];
+        CPU_INT08U offset = offsets[i];
+
+        CPU_INT08U start_x = x - offset;
+        CPU_INT08U end_x = start_x + w;
+        
+        oledc_rectangle(start_x, current_y, end_x, current_y + 1, color);
+        
+        current_y++;
+    }
+}
+
+/**
+ * @brief Draw player and delete previous position
+ *
+ * @param[in] x         center x coordinate current
+ * @param[in] y         center y coordinate current
+ * @param[in] x_past    center x coordinate past frame
+ * @param[in] y_past    center y coordinate past frame
+ * @param[in] color     string
+ *
+ * Draws an equilateral triangle with the given coordinates as its cetner
+ */
+void draw_player(CPU_INT08U x, CPU_INT08U y, CPU_INT08U x_past, CPU_INT08U y_past){
+    oledc_triangle(x_past, y_past, COLOR_BLACK);
+    oledc_triangle(x, y, COLOR_RED);
+}
+   
 #endif
 
 /* [] END OF FILE */

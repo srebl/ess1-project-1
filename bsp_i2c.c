@@ -5,7 +5,7 @@
 *
 * Filename      : bsp_i2c.h
 * Version       : V1.00
-* Programmer(s) : Lukas Buchmayer
+* Programmer(s) : Lukas Buchmayer, Gavrilo Stanic, Zobay Rahimi, Sebastian Rath
 *********************************************************************************************************
 */
 

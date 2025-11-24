@@ -14,7 +14,7 @@
  *
  * ALTERED FOR PSoC 5LP CY8C5888LT*-LP097
  *
- * Authors: Lukas Buchmayer
+ * Authors: Lukas Buchmayer, Gavrilo Stanic, Zobay Rahimi, Sebastian Rath
  * 
  * ========================================
 */
@@ -35,15 +35,20 @@
 #include <OLED_C_DC.h>
 #include <OLED_C_Reset.h>
 #include <OLED_C_CS.h>
-
-
+#include <fonts.h>
+#include <entities.h>
+#include <string.h>
+#include <stdlib.h>
     
 /*
 *********************************************************************************************************
 *                                             COLORS
 *********************************************************************************************************
 */
-#define COLOR_GREEN 0x07E0
+#define COLOR_GREEN     0x3fe7
+#define COLOR_WHITE     0xFFFF
+#define COLOR_RED       0xf8c3
+#define COLOR_BLACK     0x0000
     
 /*
 *********************************************************************************************************
@@ -58,6 +63,7 @@
 #define OLEDC_SCREENHEIGHT 95
 
 #define __OLEDC_DRV_SPI__
+    
 
 /*
 *********************************************************************************************************
@@ -241,18 +247,82 @@ void oledc_text( CPU_INT08U *text, CPU_INT16U x, CPU_INT16U y );
 void oledc_line(CPU_INT08U x1, CPU_INT08U y1, CPU_INT08U x2, CPU_INT08U y2, CPU_INT16U color);
 
 /**
- * @brief OLED C hud
+ * @brief OLED C line any
  *
- * Draws the main hud "background"
+ * @param[in] x1         start x coordinate
+ * @param[in] y1         start y coordinate
+ * @param[in] x2         end x coordinate
+ * @param[in] y2         end y coordinate
+ * @param[in] color      string
+ *
+ * Draws a 1 pixel thick line from x1y1 to x2y2 at any angle
  */
-void oledc_hud();
-
+void oledc_line_any(CPU_INT08U x1, CPU_INT08U y1, CPU_INT08U x2, CPU_INT08U y2, CPU_INT16U color);
 /**
  * @brief OLED C post init
  *
  * Additional setup, to be called during system init
  */
 void OLED_C_PostInit();
+
+/**
+ * @brief Asteroids draw border
+ *
+ * @param[in] color         desired color
+ *
+ * Draw 1pixel wide border around entire screen in COLOR_GREEN
+ */
+void asteroids_DrawBorder(CPU_INT16U color);
+
+/**
+ * @brief Asteroids game welcome screen
+ *
+ * First screen you see when "booting up" the game, only shows during first boot
+ */
+void asteroids_DrawPreGame();
+
+/**
+ * @brief Asteroids arena
+ *
+ * @param[in] state             GameState struct, current game state
+ *
+ * Draws the main component of the game arena/area without objects
+ */
+void asteroids_DrawArena(GameState *state);
+
+/**
+ * @brief Asteroids game over
+ *
+ * @param[in] state             GameState struct, current game state
+ *
+ * If game collision ooccured, this screen gets posted
+ * Game over screen for game, and asks for button click to restart game
+ */
+void asteroids_DrawGameOver(GameState *state);
+
+/**
+ * @brief Draw triangle with coordinate as middle point
+ *
+ * @param[in] x         center x coordinate
+ * @param[in] y         center y coordinate
+ * @param[in] color     string
+ *
+ * Draws an equilateral triangle with the given coordinates as its cetner
+ */
+void oledc_triangle(CPU_INT08U x, CPU_INT08U y, CPU_INT16U color);
+
+/**
+ * @brief Draw player and delete previous position
+ *
+ * @param[in] x         center x coordinate current
+ * @param[in] y         center y coordinate current
+ * @param[in] x_past    center x coordinate past frame
+ * @param[in] y_past    center y coordinate past frame
+ * @param[in] color     string
+ *
+ * Draws an equilateral triangle with the given coordinates as its cetner
+ */
+void draw_player(CPU_INT08U x, CPU_INT08U y, CPU_INT08U x_past, CPU_INT08U y_past);
 
 #endif
 

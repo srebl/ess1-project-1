@@ -14,7 +14,7 @@
  *
  * ALTERED FOR PSoC 5LP CY8C5888LT*-LP097
  *
- * Authors: Lukas Buchmayer
+ * Authors: Lukas Buchmayer, Gavrilo Stanic, Zobay Rahimi, Sebastian Rath
  * 
  * ========================================
 */
