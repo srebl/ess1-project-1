@@ -46,6 +46,7 @@
 #define FORWARD_THRESHOLD_Y                         20 //game restart
 #define SCORE_PERIOD_MS                             100
 #define LOOP_DELAY_MS                               10
+#define ASTEROID_NOT_ON_SCREEN                      -1
 
 /*
 *********************************************************************************************************
@@ -392,10 +393,11 @@ static  void  App_TaskDISPLAY (void *p_arg)
     oledc_set_font(guiFont_Tahoma_7_Regular,COLOR_WHITE,_OLEDC_FO_HORIZONTAL);
     Rectangle old_rectangle_frame_buffer [MAX_ASTEROIDS];
     Rectangle rectangle_frame_buffer_display [MAX_ASTEROIDS];
+    CPU_INT08U player_triangle_offset = PLAYER_SIZE / 2;
     
     for(CPU_INT08U i = 0; i<MAX_ASTEROIDS ; i++){
-        old_rectangle_frame_buffer[i].x = -1;
-        frame_buffer_copy.rectangles[i].x = -1;
+        old_rectangle_frame_buffer[i].x = ASTEROID_NOT_ON_SCREEN;
+        frame_buffer_copy.rectangles[i].x = ASTEROID_NOT_ON_SCREEN;
     }    
     
   /* prevent compiler warnings */
@@ -410,10 +412,11 @@ static  void  App_TaskDISPLAY (void *p_arg)
         oledc_fill_screen(COLOR_BLACK);
       }
       
-         OSSemPend(&gameState_sem, 0, OS_OPT_PEND_BLOCKING, &ts, &os_err);   
-         curr_player[0] = gameState.player.x;
-         curr_player[1] = gameState.player.y;
-         OSSemPost(&gameState_sem, OS_OPT_POST_1, &os_err);
+        OSSemPend(&gameState_sem, 0, OS_OPT_PEND_BLOCKING, &ts, &os_err);  
+        // add offset because for collision hitbox
+        curr_player[0] = gameState.player.x + player_triangle_offset;
+        curr_player[1] = gameState.player.y + player_triangle_offset;
+        OSSemPost(&gameState_sem, OS_OPT_POST_1, &os_err);
         asteroids_DrawBorder(COLOR_GREEN);
         asteroids_DrawArena(&gameState);
         
@@ -423,23 +426,23 @@ static  void  App_TaskDISPLAY (void *p_arg)
         }
         
         OSSemPost(&frame_buffer_sem, OS_OPT_POST_1, &os_err);
-    
+        // delete slivers
         for(CPU_INT08U i = 0; i<MAX_ASTEROIDS ; i++){
             if(old_rectangle_frame_buffer[i].x == -1) continue;
             delete_slivers(old_rectangle_frame_buffer[i], rectangle_frame_buffer_display[i]);
         }
-        
+        // draw asteroids
         for(CPU_INT08U i = 0; i < MAX_ASTEROIDS ; i++){
             if(rectangle_frame_buffer_display[i].x == -1) continue;
             oledc_rectangle(rectangle_frame_buffer_display[i].x, rectangle_frame_buffer_display[i].y, rectangle_frame_buffer_display[i].x + rectangle_frame_buffer_display[i].width,
             rectangle_frame_buffer_display[i].y + rectangle_frame_buffer_display[i].height, 0xFFFF);
         }
-        
+
+        draw_player(curr_player[0], curr_player[1], prev_player[0], prev_player[1]); 
+        // copy current state
         for(CPU_INT08U i = 0; i < MAX_ASTEROIDS; i++){
             old_rectangle_frame_buffer[i] = rectangle_frame_buffer_display[i];
         }
-        
-        draw_player(curr_player[0], curr_player[1], prev_player[0], prev_player[1]); 
         prev_player[0] = curr_player[0];
         prev_player[1] = curr_player[1];
         
@@ -549,7 +552,7 @@ static void App_Task_RENDERER(void *p_arg){
           
           for(CPU_INT08U i = 0; i < MAX_ASTEROIDS; i++){
               //Reset the rectangle buffer for this asteroid index
-              rectangle_frame_buffer[i].x = -1; 
+              rectangle_frame_buffer[i].x = ASTEROID_NOT_ON_SCREEN; 
               
               if(!asteroids[i].is_active) continue;
 

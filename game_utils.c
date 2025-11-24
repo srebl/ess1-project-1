@@ -40,10 +40,13 @@
  * If any overlap is detected, the game state is updated to GAME_MODE_GAME_OVER.
  */
 CPU_VOID check_collisions(GameState* game_state) {
-    const CPU_FP32 pX = game_state->player.x;
-    const CPU_FP32 pY = game_state->player.y;
-    const CPU_FP32 pSize = (CPU_FP32)game_state->player.size;
     
+    const CPU_FP32 pSize = (CPU_FP32)game_state->player.size;
+    if(game_state->player.x < 0 || game_state->player.x > 96 ||
+      game_state->player.y < 0 || game_state->player.y > 96){
+        game_state->mode = GAME_MODE_GAME_OVER;
+        return;
+      }
     for (int i = 0; i < MAX_ASTEROIDS; i++) {
         if (!game_state->asteroids[i].is_active) {
             continue;
@@ -54,15 +57,14 @@ CPU_VOID check_collisions(GameState* game_state) {
         
         //Axis-Aligned Bounding Box
         if( // Player is NOT to the left of the asteroid's right edge
-            pX < game_state->asteroids[i].x + aSize               &&
+            game_state->player.x < game_state->asteroids[i].x + aSize               &&
             // Player's right edge is NOT to the left of the asteroid's left edge
-            pX + pSize > game_state->asteroids[i].x               && 
+            game_state->player.x + pSize > game_state->asteroids[i].x               && 
             // Player is NOT above the asteroid's bottom edge
-            pY < game_state->asteroids[i].y + aSize               &&             
+            game_state->player.y < game_state->asteroids[i].y + aSize               &&             
             // Player's bottom edge is NOT above the asteroid's top edge
-            pY + pSize > game_state->asteroids[i].y
+            game_state->player.y + pSize > game_state->asteroids[i].y
            ){
-            
             game_state->mode = GAME_MODE_GAME_OVER;
             break;
         }

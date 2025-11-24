@@ -31,15 +31,14 @@
 #define GAME_AREA_HEIGHT 95
 #define GAME_AREA_WIDTH 95
   
-#define MAX_ASTEROIDS 3
+#define MAX_ASTEROIDS 4
 #define MIN_ASTEROID_SIZE 3
-#define MAX_ASTEROID_SIZE 20
+#define MAX_ASTEROID_SIZE 15
   
-#define MAX_PLAYER_SPEED 8.0f
 #define STOPPED_SPEED    0.0f
 #define PLAYER_SIZE      7
 #define CENTER_POINT                                45.0f
-#define DEAD_ZONE_WIDTH                             10.0f // +/- 5.0f around 50.0f
+#define DEAD_ZONE_WIDTH                             10.0f 
 #define MAX_ACCEL_VALUE                             100.0f
 #define MAX_PLAYER_SPEED_F                          6.0f  // Float maximum speed
   
