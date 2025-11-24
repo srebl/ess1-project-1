@@ -38,6 +38,11 @@
 #define MAX_PLAYER_SPEED 8.0f
 #define STOPPED_SPEED    0.0f
 #define PLAYER_SIZE      7
+#define CENTER_POINT                                45.0f
+#define DEAD_ZONE_WIDTH                             10.0f // +/- 5.0f around 50.0f
+#define MAX_ACCEL_VALUE                             100.0f
+#define MAX_PLAYER_SPEED_F                          6.0f  // Float maximum speed
+  
 
 /*
 *********************************************************************************************************
@@ -71,7 +76,6 @@ typedef struct {
 typedef enum {
     GAME_MODE_MENU,
     GAME_MODE_RUNNING,
-    GAME_MODE_PAUSED,
     GAME_MODE_GAME_OVER
 } GameMode;
 

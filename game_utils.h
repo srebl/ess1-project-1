@@ -99,4 +99,6 @@ CPU_VOID reset_game_state(GameState* game_state);
  * Initializes the game state
  */
 CPU_VOID game_state_init(GameState* game_state);
+
+CPU_FP32 compute_velocity(CPU_FP32 input);
 /* [] END OF FILE */

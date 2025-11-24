@@ -658,7 +658,7 @@ void asteroids_DrawPreGame(){
     oledc_line_any(80, 55, 85, 45, COLOR_GREEN);
     
     
-    CPU_INT08U subtitle[] = "Starting soon...";
+    CPU_INT08U subtitle[] = "Flip to start";
     oledc_text(subtitle, 15, 65);
 }
 
