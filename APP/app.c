@@ -319,12 +319,12 @@ static  void  App_ObjCreate (void)
 
 /*
 *********************************************************************************************************
-*                                          App_TaskSENDER()
+*                                          App_TaskINPUT()
 *
 * Description : This task reads acceleration data from a 6DOF IMU sensor and assigns the read data to 
                 the GameState struct. Specifically here, only the player struct of the GameState struct.
 *
-* Argument(s) : p_arg   is the argument passed to 'App_TaskSENDER()' by 'OSTaskCreate()'.
+* Argument(s) : p_arg   is the argument passed to 'App_TaskINPUT()' by 'OSTaskCreate()'.
 *
 * Return(s)   : none
 *
@@ -366,12 +366,12 @@ static void App_TaskINPUT (void *p_arg)
 
 /*
 *********************************************************************************************************
-*                                          App_TaskRECEIVER()
+*                                          App_TaskDISPLAY()
 *
 * Description : This task reads acceleration data from a 6DOF IMU sensor, logs the data if debugging
 *               is enabled, and then delays for a specified time before repeating.
 *
-* Argument(s) : p_arg   is the argument passed to 'App_TaskRECEIVER()' by 'OSTaskCreate()'.
+* Argument(s) : p_arg   is the argument passed to 'App_TaskDISPLAY()' by 'OSTaskCreate()'.
 *
 * Return(s)   : none
 *
@@ -468,11 +468,11 @@ static  void  App_TaskDISPLAY (void *p_arg)
 *********************************************************************************************************
 *                                          App_Task_GAME_LOOP
 *
-* Description : This task reads acceleration data from a MessageQueue, inits the OLED C and then prints
+* Description : This task reads acceleration data from a semaphore, inits the OLED C and then prints
                 the data as coordinates on the OLED C as a pixel on an X and Y Axis, with an additional
                 line for its acceleration on the Z axis placed onto the Y axis.
 *
-* Argument(s) : p_arg is the argument passed to 'App_Task_RECEIVER' by 'OSTaskCreate()'.
+* Argument(s) : p_arg is the argument passed to 'App_Task_GAME_LOOP' by 'OSTaskCreate()'.
 *
 * Return(s)   : none
 *
@@ -572,7 +572,7 @@ static void App_Task_RENDERER(void *p_arg){
               CPU_FP32 y_visible_max = (y_end > 96) ? 96 : y_end;
               
               //Check if asteroid is entirely off-screen (should be caught by destroy_asteroids, 
-              //fail-safe for rendering
+              //fail-safe for rendering)
               if (x_visible_min >= x_visible_max || y_visible_min >= y_visible_max) {
                   //off-screen
                   continue; 
