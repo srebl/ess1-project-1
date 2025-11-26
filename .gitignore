@@ -8,6 +8,7 @@ Release/
 Export/
 codegentemp/
 Generated_Source/
+.vscode/
 *_datasheet.pdf
 *_timing.html
 *.cycdx

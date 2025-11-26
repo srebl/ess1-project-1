@@ -23,7 +23,14 @@
 #include <cpu.h>
 
     
-//Bitmap for font
+/**
+ * @var guiFont_Tahoma_7_Regular
+ * @brief Font definition for the Tahoma 7pt regular bitmap font.
+ *
+ * @details Contains width, height, glyph offsets, and bitmap data used by the
+ *          OLED rendering subsystem. This font is used for drawing small,
+ *          high-readability text on the 96×96 OLED display.
+ */
 extern CPU_INT08U guiFont_Tahoma_7_Regular[1459];
 
 
